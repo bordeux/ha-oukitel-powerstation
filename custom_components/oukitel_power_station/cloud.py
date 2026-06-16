@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any
 import uuid
 
 from .const import (
+    PATH_BUSINESS_ATTRS,
     PATH_DEVICE_LIST,
     PATH_LOGIN,
     PATH_PRODUCT_TSL,
@@ -105,6 +106,29 @@ class OukitelCloud:
         """Return the product thing-model (data-point dictionary)."""
         data = await self._get(PATH_PRODUCT_TSL, {"pk": pk})
         return data.get("data") or {}
+
+    async def get_business_attributes(self, pk: str, dk: str) -> dict[int, Any]:
+        """Return current scalar property values from the cloud as {tag_id: value}.
+
+        Used for tags the LAN never reports (temperature, output voltage). Structs are
+        skipped (those come from the local link); INT/ENUM -> int, BOOL -> bool.
+        """
+        data = await self._get(PATH_BUSINESS_ATTRS, {"pk": pk, "dk": dk})
+        out: dict[int, Any] = {}
+        for item in (data.get("data") or {}).get("customizeTslInfo") or []:
+            tag = item.get("abId")
+            raw = item.get("resourceValce")
+            dtype = item.get("dataType")
+            if tag is None or raw is None or dtype == "STRUCT":
+                continue
+            try:
+                if dtype == "BOOL":
+                    out[int(tag)] = str(raw).lower() == "true"
+                elif dtype in ("INT", "ENUM"):
+                    out[int(tag)] = int(float(raw))
+            except (TypeError, ValueError):
+                continue
+        return out
 
     # --- http helpers ---
     async def _post_form(self, path: str, fields: dict[str, str]) -> dict[str, Any]:

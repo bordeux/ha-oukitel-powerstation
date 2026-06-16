@@ -61,6 +61,8 @@ DEFAULT_REGION: Final = "EU"
 PATH_LOGIN: Final = "/v2/enduser/enduserapi/emailPwdLogin"
 PATH_DEVICE_LIST: Final = "/v2/binding/enduserapi/userDeviceList"
 PATH_PRODUCT_TSL: Final = "/v2/binding/enduserapi/productTSL"
+# Current property values (returns every tag, incl. ones the LAN never sends).
+PATH_BUSINESS_ATTRS: Final = "/v2/binding/enduserapi/getDeviceBusinessAttributes"
 
 # ---- config entry keys ----
 CONF_REGION: Final = "region"
@@ -71,6 +73,11 @@ CONF_DK: Final = "dk"  # deviceKey (== MAC, lowercase, no separators)
 CONF_AUTH_KEY: Final = "auth_key"
 CONF_HOST: Final = "host"  # station LAN IP
 CONF_NAME: Final = "name"
+CONF_CLOUD_POLL: Final = "cloud_poll"  # opt-in: fetch cloud-only values (temp/voltage)
+
+# Tags the device never sends over the LAN; only available from the cloud snapshot.
+CLOUD_ONLY_TAGS: Final = (14, 28)  # temperature, output voltage
+CLOUD_POLL_INTERVAL_S: Final = 300  # how often to poll the cloud when enabled
 
 # ---- enum value maps (TSL) ----
 FREQUENCY_OPTIONS: Final = {0: "50 Hz", 1: "60 Hz"}

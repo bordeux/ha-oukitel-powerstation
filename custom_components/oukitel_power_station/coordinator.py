@@ -15,11 +15,15 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .cloud import OukitelCloud, OukitelCloudAuthError, OukitelCloudError
 from .const import (
+    CLOUD_ONLY_TAGS,
+    CLOUD_POLL_INTERVAL_S,
     CONF_AUTH_KEY,
+    CONF_CLOUD_POLL,
     CONF_DK,
     CONF_EMAIL,
     CONF_HOST,
     CONF_PASSWORD,
+    CONF_PK,
     CONF_REGION,
     DOMAIN,
 )
@@ -51,6 +55,8 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
         self._listen_task: asyncio.Task | None = None
         self._state: dict[int, Any] = {}
         self._auth_refetched = False
+        self._cloud: OukitelCloud | None = None
+        self._last_cloud_poll: float = 0.0
 
     @property
     def dk(self) -> str:
@@ -138,6 +144,35 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
             self.config_entry, data={**data, CONF_AUTH_KEY: match["authKey"]}
         )
 
+    async def _poll_cloud_if_due(self) -> None:
+        """When opted-in, fetch cloud-only values (temp/voltage) on a slow cadence.
+
+        Failures are swallowed: the cloud poll must never break the local update.
+        """
+        if not self.config_entry.options.get(CONF_CLOUD_POLL):
+            return
+        now = self.hass.loop.time()
+        if self._last_cloud_poll and now - self._last_cloud_poll < CLOUD_POLL_INTERVAL_S:
+            return
+        self._last_cloud_poll = now
+        data = self.config_entry.data
+        try:
+            if self._cloud is None:
+                self._cloud = OukitelCloud(async_get_clientsession(self.hass), data[CONF_REGION])
+                await self._cloud.login(data[CONF_EMAIL], data[CONF_PASSWORD])
+            attrs = await self._cloud.get_business_attributes(data[CONF_PK], self.dk)
+        except OukitelCloudAuthError as err:
+            self._cloud = None  # token likely expired; re-login next cycle
+            _LOGGER.debug("cloud poll auth failed (%s); will re-login next cycle", err)
+            return
+        except OukitelCloudError as err:
+            _LOGGER.debug("cloud poll failed: %s", err)
+            return
+        updates = {t: attrs[t] for t in CLOUD_ONLY_TAGS if t in attrs}
+        if updates:
+            _LOGGER.debug("cloud poll merged %s", updates)
+            self._state.update(updates)
+
     async def _async_update_data(self) -> dict[int, Any]:
         try:
             await self._ensure_connected()
@@ -151,6 +186,7 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
         except OukitelError as err:
             await self._reset_connection()
             raise UpdateFailed(str(err)) from err
+        await self._poll_cloud_if_due()
         return dict(self._state)
 
     # --- control ---

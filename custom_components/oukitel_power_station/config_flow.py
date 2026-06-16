@@ -6,13 +6,20 @@ from collections.abc import Mapping
 import logging
 from typing import Any
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlow,
+)
+from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import voluptuous as vol
 
 from .cloud import OukitelCloud, OukitelCloudAuthError, OukitelCloudError
 from .const import (
     CONF_AUTH_KEY,
+    CONF_CLOUD_POLL,
     CONF_DK,
     CONF_EMAIL,
     CONF_HOST,
@@ -39,6 +46,11 @@ class OukitelConfigFlow(ConfigFlow, domain=DOMAIN):
         self._creds: dict[str, str] = {}
         self._devices: list[dict[str, Any]] = []
         self._device: dict[str, Any] = {}
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry) -> OukitelOptionsFlow:
+        return OukitelOptionsFlow()
 
     # --- step 1: cloud login ---
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
@@ -182,3 +194,14 @@ class OukitelConfigFlow(ConfigFlow, domain=DOMAIN):
             errors=errors,
             description_placeholders={"email": self._creds.get(CONF_EMAIL, "")},
         )
+
+
+class OukitelOptionsFlow(OptionsFlow):
+    """Options: opt in to fetching cloud-only values (temperature, voltage)."""
+
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        if user_input is not None:
+            return self.async_create_entry(data=user_input)
+        current = self.config_entry.options.get(CONF_CLOUD_POLL, False)
+        schema = vol.Schema({vol.Required(CONF_CLOUD_POLL, default=current): bool})
+        return self.async_show_form(step_id="init", data_schema=schema)

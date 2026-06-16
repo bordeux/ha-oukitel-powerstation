@@ -41,6 +41,19 @@
       "reauth_successful": "Re-authentication was successful."
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options",
+        "data": {
+          "cloud_poll": "Fetch temperature & voltage from the cloud"
+        },
+        "data_description": {
+          "cloud_poll": "This device does not send temperature or output voltage over the local network. Enable this to poll the Quectel cloud every few minutes (using your stored credentials) to fill them in. Off by default to keep operation fully local."
+        }
+      }
+    }
+  },
   "entity": {
     "sensor": {
       "battery": { "name": "Battery" },
