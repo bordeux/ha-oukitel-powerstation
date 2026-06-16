@@ -62,6 +62,7 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
 
     # --- connection lifecycle ---
     def _handle_report(self, report: dict[int, Any]) -> None:
+        _LOGGER.debug("report tags=%s", sorted(report))
         # Struct tags (AC/USB/TypeC/DC) may arrive partially on change; deep-merge
         # their sub-dicts so a single changed port doesn't wipe its siblings.
         for tag, value in report.items():
