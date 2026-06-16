@@ -45,6 +45,10 @@ MAGIC = b"\xaa\xaa"
 # treated as dead and the listener exits so the coordinator reconnects.
 _PING_INTERVAL = 20.0
 _READ_TIMEOUT = 90.0
+# Bound the TCP connect + handshake; without this a slow/unresponsive device
+# (or a half-open socket during a reload) blocks setup until HA's bootstrap
+# timeout, stalling the whole instance.
+_CONNECT_TIMEOUT = 15.0
 
 
 class OukitelError(Exception):
@@ -312,7 +316,17 @@ class OukitelConnection:
 
     # --- public ---
     async def connect(self) -> None:
-        """Open the socket and complete the handshake (raises on failure)."""
+        """Open the socket and complete the handshake within a bounded time."""
+        try:
+            await asyncio.wait_for(self._open_and_handshake(), _CONNECT_TIMEOUT)
+        except TimeoutError as err:
+            await self.close()
+            raise OukitelError("timed out connecting / completing handshake") from err
+        except OukitelError:
+            await self.close()
+            raise
+
+    async def _open_and_handshake(self) -> None:
         self._reader, self._writer = await asyncio.open_connection(self._host, self._port)
         await self._send(CMD_HELLO)  # p2
         nonce: str | None = None

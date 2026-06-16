@@ -103,10 +103,9 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
         try:
             await self._conn.listen()
         except asyncio.CancelledError:
-            raise
-        except OukitelError as err:
+            raise  # shutdown / reload: not a connection loss, don't trigger recovery
+        except Exception as err:  # any read/decode failure -> reconnect
             _LOGGER.debug("listen ended (%s); will reconnect", err)
-        finally:
             await self._reset_connection()
             self.async_set_update_error(OukitelError("connection lost"))
             await self.async_request_refresh()
