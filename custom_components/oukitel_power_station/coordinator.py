@@ -62,15 +62,11 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
 
     # --- connection lifecycle ---
     def _handle_report(self, report: dict[int, Any]) -> None:
-        _LOGGER.debug("report tags=%s", sorted(report))
-        # Struct tags (AC/USB/TypeC/DC) may arrive partially on change; deep-merge
-        # their sub-dicts so a single changed port doesn't wipe its siblings.
-        for tag, value in report.items():
-            current = self._state.get(tag)
-            if isinstance(value, dict) and isinstance(current, dict):
-                self._state[tag] = {**current, **value}
-            else:
-                self._state[tag] = value
+        _LOGGER.debug("report=%s", report)
+        # Replace, don't merge: a read returns the full struct, so replacing lets a
+        # port that turned off (dropped/zeroed sub-tag) actually clear instead of
+        # keeping its last non-zero value forever.
+        self._state.update(report)
         self.async_set_updated_data(dict(self._state))
 
     async def _ensure_connected(self) -> None:

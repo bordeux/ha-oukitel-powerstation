@@ -40,10 +40,11 @@ _LOGGER = logging.getLogger(__name__)
 
 MAGIC = b"\xaa\xaa"
 
-# Keepalive: send a p7 ping this often so the device keeps the session and
-# keeps streaming; if no frame arrives within the read timeout the socket is
-# treated as dead and the listener exits so the coordinator reconnects.
-_PING_INTERVAL = 20.0
+# Keepalive: the device stops streaming unless the subscription + heartbeat are
+# re-asserted within the heartbeat window (it advertises interval=30s), so re-arm
+# every 20s. If no frame arrives within the read timeout the socket is treated as
+# dead and the listener exits so the coordinator reconnects.
+_REARM_INTERVAL = 20.0
 _READ_TIMEOUT = 90.0
 # Bound the TCP connect + handshake; without this a slow/unresponsive device
 # (or a half-open socket during a reload) blocks setup until HA's bootstrap
@@ -357,8 +358,15 @@ class OukitelConnection:
                     raise OukitelAuthError(f"login rejected (result={result})")
         raise OukitelAuthError("no login result (p5) received")
 
+    async def _rearm(self) -> None:
+        """Re-assert HF reporting + heartbeat so the device keeps streaming."""
+        await self._send(
+            CMD_WRITE, ttlv_encode([(TAG_HF_REPORTING, "num", HF_REPORTING_LAN_WIFI)]), encrypt=True
+        )
+        await self._send(CMD_HEARTBEAT, ttlv_encode([(1, "num", 30), (2, "num", 1)]), encrypt=True)
+
     async def subscribe_and_read(self) -> None:
-        """Enable high-frequency reporting and request a full snapshot."""
+        """Enable high-frequency reporting, request a full snapshot, send heartbeat."""
         await self._send(
             CMD_WRITE, ttlv_encode([(TAG_HF_REPORTING, "num", HF_REPORTING_LAN_WIFI)]), encrypt=True
         )
@@ -377,9 +385,6 @@ class OukitelConnection:
             CMD_READ, b"".join(struct.pack(">H", t) for t in READ_TAG_IDS), encrypt=True
         )
 
-    async def _ping(self) -> None:
-        await self._send(CMD_PING)
-
     def _dispatch(self, frames: list[tuple[int, int, bytes]]) -> None:
         for _pid, cmd, payload in frames:
             # Telemetry arrives as cmd20 reports AND as the reply to a cmd17 read;
@@ -396,15 +401,15 @@ class OukitelConnection:
                 _LOGGER.debug("unhandled frame cmd=%s len=%s", cmd, len(payload))
 
     async def _keepalive(self) -> None:
-        """Send periodic p7 pings; on failure, close the socket to force a reconnect."""
+        """Re-arm reporting periodically; on failure, close the socket to reconnect."""
         try:
             while True:
-                await asyncio.sleep(_PING_INTERVAL)
-                await self._ping()
+                await asyncio.sleep(_REARM_INTERVAL)
+                await self._rearm()
         except asyncio.CancelledError:
             raise
         except Exception as err:
-            _LOGGER.debug("keepalive ping failed (%s); closing socket", err)
+            _LOGGER.debug("keepalive re-arm failed (%s); closing socket", err)
             if self._writer is not None:
                 self._writer.close()
 
