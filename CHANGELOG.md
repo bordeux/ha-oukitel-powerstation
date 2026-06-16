@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/bordeux/ha-oukitel-powerstation/compare/v0.2.1...v0.2.2) (2026-06-16)
+
+
+### Bug Fixes
+
+* keep device streaming by re-arming subscription, replace struct state ([44d081c](https://github.com/bordeux/ha-oukitel-powerstation/commit/44d081c5e6911ae3595fbf47f7dc0ef942e5cace))
+
 ## [0.2.1](https://github.com/bordeux/ha-oukitel-powerstation/compare/v0.2.0...v0.2.1) (2026-06-16)
 
 
