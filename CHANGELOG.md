@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/bordeux/ha-oukitel-powerstation/compare/v0.2.2...v0.3.0) (2026-06-16)
+
+
+### Features
+
+* optional cloud poll for temperature and voltage ([f04dae1](https://github.com/bordeux/ha-oukitel-powerstation/commit/f04dae10cb79640a42c872f5d78f3d4acd234d48))
+
 ## [0.2.2](https://github.com/bordeux/ha-oukitel-powerstation/compare/v0.2.1...v0.2.2) (2026-06-16)
 
 
