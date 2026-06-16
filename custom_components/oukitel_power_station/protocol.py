@@ -31,6 +31,7 @@ from .const import (
     CMD_READ,
     CMD_REPORT,
     CMD_WRITE,
+    CMD_WRITE_ACK,
     HF_REPORTING_LAN_WIFI,
     READ_TAG_IDS,
     TAG_HF_REPORTING,
@@ -328,6 +329,7 @@ class OukitelConnection:
             raise
 
     async def _open_and_handshake(self) -> None:
+        _LOGGER.debug("connecting to %s:%s", self._host, self._port)
         self._reader, self._writer = await asyncio.open_connection(self._host, self._port)
         await self._send(CMD_HELLO)  # p2
         nonce: str | None = None
@@ -340,6 +342,7 @@ class OukitelConnection:
                 break
         if not nonce:
             raise OukitelAuthError("no nonce (p3) received")
+        _LOGGER.debug("handshake: nonce received, sending login token")
         self._iv = nonce.encode()
         token = login_token(self._key, nonce)
         token_payload = (
@@ -354,6 +357,7 @@ class OukitelConnection:
                         None,
                     )
                     if result == 0:
+                        _LOGGER.debug("handshake: login OK, encryption on")
                         return
                     raise OukitelAuthError(f"login rejected (result={result})")
         raise OukitelAuthError("no login result (p5) received")
@@ -377,6 +381,7 @@ class OukitelConnection:
 
     async def async_set(self, tag: int, value: object, *, is_bool: bool) -> None:
         """Write a single property (cmd19)."""
+        _LOGGER.debug("write tag=%s value=%s (bool=%s)", tag, value, is_bool)
         field = (tag, "bool", bool(value)) if is_bool else (tag, "num", int(value))
         await self._send(CMD_WRITE, ttlv_encode([field]), encrypt=True)
 
@@ -393,12 +398,14 @@ class OukitelConnection:
                 try:
                     report = ttlv_decode(aes_decrypt(self._key, self._iv, payload))
                 except Exception as err:  # tolerate a bad frame in the loop
-                    _LOGGER.debug("could not decode cmd %s payload: %s", cmd, err)
+                    _LOGGER.debug("could not decode cmd %s (raw %s): %s", cmd, payload.hex(), err)
                     continue
                 if report and self._on_report:
                     self._on_report(report)
+            elif cmd == CMD_WRITE_ACK:
+                _LOGGER.debug("write ack received")
             elif cmd not in (CMD_PONG, CMD_PING):
-                _LOGGER.debug("unhandled frame cmd=%s len=%s", cmd, len(payload))
+                _LOGGER.debug("unhandled frame cmd=%s raw=%s", cmd, payload.hex())
 
     async def _keepalive(self) -> None:
         """Re-arm reporting periodically; on failure, close the socket to reconnect."""
@@ -406,6 +413,7 @@ class OukitelConnection:
             while True:
                 await asyncio.sleep(_REARM_INTERVAL)
                 await self._rearm()
+                _LOGGER.debug("re-armed reporting (subscribe + heartbeat)")
         except asyncio.CancelledError:
             raise
         except Exception as err:

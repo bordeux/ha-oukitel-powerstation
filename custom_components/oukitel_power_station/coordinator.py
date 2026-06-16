@@ -73,11 +73,13 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
         if self._conn is not None:
             return
         host = self.host
+        _LOGGER.debug("(re)connecting to %s at %s", self.dk, host)
         conn = OukitelConnection(host, self.config_entry.data[CONF_AUTH_KEY], self._handle_report)
         try:
             await conn.connect()
         except OukitelAuthError as err:
             await conn.close()
+            _LOGGER.debug("auth rejected (%s); refetching authKey", err)
             await self._refetch_auth_key()
             raise UpdateFailed("auth key rotated; refetched, retrying") from err
         except OukitelError as err:
@@ -85,11 +87,15 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
             # try to rediscover a possibly-changed IP, then fail this cycle
             new_ip = await async_discover(self.dk)
             if new_ip and new_ip != host:
+                _LOGGER.debug("rediscovered %s at new IP %s (was %s)", self.dk, new_ip, host)
                 self.hass.config_entries.async_update_entry(
                     self.config_entry, data={**self.config_entry.data, CONF_HOST: new_ip}
                 )
+            else:
+                _LOGGER.debug("connect to %s failed (%s); discovery found %s", host, err, new_ip)
             raise UpdateFailed(f"cannot connect to {host}") from err
         self._conn = conn
+        _LOGGER.debug("connected to %s; subscribing", self.dk)
         await conn.subscribe_and_read()
         self._listen_task = self.config_entry.async_create_background_task(
             self.hass, self._listen(), name=f"{DOMAIN}_listen_{self.dk}"
@@ -127,6 +133,7 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
         match = next((d for d in devices if (d.get("deviceKey") or "").lower() == self.dk), None)
         if not match or not match.get("authKey"):
             raise ConfigEntryAuthFailed("device not found on account")
+        _LOGGER.debug("authKey refetched from cloud for %s", self.dk)
         self.hass.config_entries.async_update_entry(
             self.config_entry, data={**data, CONF_AUTH_KEY: match["authKey"]}
         )
