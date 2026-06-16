@@ -1,0 +1,28 @@
+{
+  "entity": {
+    "sensor": {
+      "battery": { "default": "mdi:battery" },
+      "remaining_time": { "default": "mdi:timer-sand" },
+      "charging_time": { "default": "mdi:battery-clock" },
+      "total_input_power": { "default": "mdi:transmission-tower-import" },
+      "total_output_power": { "default": "mdi:transmission-tower-export" },
+      "ac_input_power": { "default": "mdi:power-plug" },
+      "dc_input_power": { "default": "mdi:current-dc" },
+      "temperature": { "default": "mdi:thermometer" },
+      "inverter_version": { "default": "mdi:chip" },
+      "bms_version": { "default": "mdi:chip" }
+    },
+    "switch": {
+      "ac_output": { "default": "mdi:power-socket-eu" },
+      "usb_output": { "default": "mdi:usb-port" },
+      "dc_output": { "default": "mdi:current-dc" }
+    },
+    "select": {
+      "output_voltage": { "default": "mdi:sine-wave" },
+      "output_frequency": { "default": "mdi:current-ac" }
+    },
+    "number": {
+      "ac_charge_limit": { "default": "mdi:battery-charging-high" }
+    }
+  }
+}

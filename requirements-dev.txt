@@ -1,0 +1,4 @@
+# Dev/CI tooling for the Oukitel HA integration
+ruff>=0.6
+pytest>=8
+cryptography>=42        # used by protocol.py (also bundled in Home Assistant)

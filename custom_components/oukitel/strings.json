@@ -1,0 +1,70 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Oukitel cloud login",
+        "description": "Sign in with your WonderFree / Oukitel account. Used once to fetch the device key; control is local afterwards.",
+        "data": {
+          "region": "Region",
+          "email": "Email",
+          "password": "Password"
+        }
+      },
+      "device": {
+        "title": "Select device",
+        "data": {
+          "dk": "Device"
+        }
+      },
+      "manual": {
+        "title": "Station IP address",
+        "description": "The station could not be found automatically. Enter its IP address on your LAN.",
+        "data": {
+          "host": "IP address"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate",
+        "description": "Re-enter the password for {email} to refresh the device key.",
+        "data": {
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid credentials.",
+      "cannot_connect": "Could not connect.",
+      "no_devices": "No devices found on this account."
+    },
+    "abort": {
+      "already_configured": "This device is already configured.",
+      "reauth_successful": "Re-authentication was successful."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "battery": { "name": "Battery" },
+      "remaining_time": { "name": "Remaining time" },
+      "charging_time": { "name": "Charging time" },
+      "total_input_power": { "name": "Total input power" },
+      "total_output_power": { "name": "Total output power" },
+      "ac_input_power": { "name": "AC input power" },
+      "dc_input_power": { "name": "DC input power" },
+      "temperature": { "name": "Temperature" },
+      "inverter_version": { "name": "Inverter version" },
+      "bms_version": { "name": "BMS version" }
+    },
+    "switch": {
+      "ac_output": { "name": "AC output" },
+      "usb_output": { "name": "USB output" },
+      "dc_output": { "name": "DC output" }
+    },
+    "select": {
+      "output_voltage": { "name": "Output voltage" },
+      "output_frequency": { "name": "Output frequency" }
+    },
+    "number": {
+      "ac_charge_limit": { "name": "AC charge limit" }
+    }
+  }
+}

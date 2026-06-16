@@ -1,0 +1,18 @@
+# Reverse-engineering artifacts (large / not for distribution)
+apk/
+*.pcap
+*.xapk
+
+# Secrets / local data
+secrets.local
+.mcp.json
+# reverse-engineering / dev helpers (superseded by the integration; may contain device keys)
+tools/
+**/__pycache__/
+*.pyc
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+.venv/
