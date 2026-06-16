@@ -426,3 +426,20 @@ ENUM values for switches are booleans; struct sub-fields are nested TTLV (decode
 - Exact TTLV tag dictionary for the P2001E (the data-point map) — to be derived in step 11.2.
 - Cloud login/auth signing scheme (needed for a self-contained HA integration without MITM).
 - Bluetooth (BLE) path uses the **same** TTLV + AES handshake (`ak3`) if a WiFi-less fallback is wanted.
+
+## 13. Temperature & output voltage are CLOUD-ONLY (verified 2026-06-16)
+Tags **14 (temp)** and **28 (ACvoltage_Switchover)** are **never delivered over the LAN** on this
+firmware (FCM100D, comProto 3.0.0). Verified live: full `cmd17` read, focused read of `[14,28]`,
+single-tag read of `[14]`, a 150s passive watch, a 10-minute watch (619 frames), and AC-output-on for
+20s — none ever produced tag 14 or 28. The app's own captured read list requests them too, so the app
+also can't get them locally; it reads them from the **cloud**.
+
+**Cloud current-values endpoint** (used by the app's device panel):
+`GET {base}/v2/binding/enduserapi/getDeviceBusinessAttributes?pk=..&dk=..` (Bearer token) →
+`data.customizeTslInfo[]` with `{abId (== tag id), resourceCode, dataType, resourceValce (current value)}`
+for **all** tags, including `14 temp=22` and `28 ACvoltage_Switchover=230`. `data.deviceData` also has
+module info (signalStrength, mcuVersion BMS/DSP/MCU, fw version, etc.). `getPropertyDataList`
+(`/v2/quecdatastorage/...`) is the historical-chart endpoint (needs `codeList`+`type`+time range).
+
+Integration: opt-in option `cloud_poll` (default off) polls `getDeviceBusinessAttributes` every 300s
+and merges tags 14/28 only; everything else stays local. See `cloud.get_business_attributes`.
