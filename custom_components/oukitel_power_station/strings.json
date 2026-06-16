@@ -52,7 +52,18 @@
       "dc_input_power": { "name": "DC input power" },
       "temperature": { "name": "Temperature" },
       "inverter_version": { "name": "Inverter version" },
-      "bms_version": { "name": "BMS version" }
+      "bms_version": { "name": "BMS version" },
+      "ac_output_power": { "name": "AC output power" },
+      "ac_output_voltage": { "name": "AC output voltage" },
+      "usb_qc1_power": { "name": "USB-A power" },
+      "usb_qc2_power": { "name": "USB-C (QC) power" },
+      "typec1_power": { "name": "Type-C 1 power" },
+      "typec2_power": { "name": "Type-C 2 power" },
+      "typec3_power": { "name": "Type-C 3 power" },
+      "typec4_power": { "name": "Type-C 4 power" },
+      "dc_output_power": { "name": "DC (car) output power" },
+      "dc_output_voltage": { "name": "DC (car) output voltage" },
+      "dc_output_current": { "name": "DC (car) output current" }
     },
     "switch": {
       "ac_output": { "name": "AC output" },

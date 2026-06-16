@@ -10,7 +10,18 @@
       "dc_input_power": { "default": "mdi:current-dc" },
       "temperature": { "default": "mdi:thermometer" },
       "inverter_version": { "default": "mdi:chip" },
-      "bms_version": { "default": "mdi:chip" }
+      "bms_version": { "default": "mdi:chip" },
+      "ac_output_power": { "default": "mdi:power-socket-eu" },
+      "ac_output_voltage": { "default": "mdi:sine-wave" },
+      "usb_qc1_power": { "default": "mdi:usb-port" },
+      "usb_qc2_power": { "default": "mdi:usb-c-port" },
+      "typec1_power": { "default": "mdi:usb-c-port" },
+      "typec2_power": { "default": "mdi:usb-c-port" },
+      "typec3_power": { "default": "mdi:usb-c-port" },
+      "typec4_power": { "default": "mdi:usb-c-port" },
+      "dc_output_power": { "default": "mdi:current-dc" },
+      "dc_output_voltage": { "default": "mdi:current-dc" },
+      "dc_output_current": { "default": "mdi:current-dc" }
     },
     "switch": {
       "ac_output": { "default": "mdi:power-socket-eu" },

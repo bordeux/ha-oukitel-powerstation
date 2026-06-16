@@ -15,6 +15,8 @@ from homeassistant.components.sensor import (
 from homeassistant.const import (
     PERCENTAGE,
     EntityCategory,
+    UnitOfElectricCurrent,
+    UnitOfElectricPotential,
     UnitOfPower,
     UnitOfTemperature,
     UnitOfTime,
@@ -28,10 +30,22 @@ from .entity import OukitelEntity
 
 @dataclass(frozen=True, kw_only=True)
 class OukitelSensorDescription(SensorEntityDescription):
-    """Sensor description bound to a protocol tag."""
+    """Sensor description bound to a protocol tag (and optional struct sub-tag)."""
 
     tag: int
+    subtag: int | None = None
     value_fn: Callable[[Any], Any] = lambda v: v
+
+
+def _power(key: str, tag: int, subtag: int | None = None) -> OukitelSensorDescription:
+    return OukitelSensorDescription(
+        key=key,
+        tag=tag,
+        subtag=subtag,
+        device_class=SensorDeviceClass.POWER,
+        native_unit_of_measurement=UnitOfPower.WATT,
+        state_class=SensorStateClass.MEASUREMENT,
+    )
 
 
 SENSORS: tuple[OukitelSensorDescription, ...] = (
@@ -103,6 +117,46 @@ SENSORS: tuple[OukitelSensorDescription, ...] = (
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda v: str(int(v)),
     ),
+    # --- per-port power (struct sub-tags) ---
+    # AC Info (tag 6): 2=AC1 power(W), 3=AC1 voltage(V)
+    _power("ac_output_power", 6, 2),
+    OukitelSensorDescription(
+        key="ac_output_voltage",
+        tag=6,
+        subtag=3,
+        device_class=SensorDeviceClass.VOLTAGE,
+        native_unit_of_measurement=UnitOfElectricPotential.VOLT,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_registry_enabled_default=False,
+    ),
+    # USB Info (tag 7): 2=USB_QC1 power(W), 3=USB_QC2 power(W)
+    _power("usb_qc1_power", 7, 2),
+    _power("usb_qc2_power", 7, 3),
+    # TypeC Info (tag 8): 2=Typec1, 5=Typec2, 6=Typec3, 7=Typec4 (all W)
+    _power("typec1_power", 8, 2),
+    _power("typec2_power", 8, 5),
+    _power("typec3_power", 8, 6),
+    _power("typec4_power", 8, 7),
+    # DC Info (tag 9): 2=CAR1 power(W), 3=voltage(V), 4=current(A)
+    _power("dc_output_power", 9, 2),
+    OukitelSensorDescription(
+        key="dc_output_voltage",
+        tag=9,
+        subtag=3,
+        device_class=SensorDeviceClass.VOLTAGE,
+        native_unit_of_measurement=UnitOfElectricPotential.VOLT,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_registry_enabled_default=False,
+    ),
+    OukitelSensorDescription(
+        key="dc_output_current",
+        tag=9,
+        subtag=4,
+        device_class=SensorDeviceClass.CURRENT,
+        native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_registry_enabled_default=False,
+    ),
 )
 
 
@@ -122,11 +176,13 @@ class OukitelSensor(OukitelEntity, SensorEntity):
     entity_description: OukitelSensorDescription
 
     def __init__(self, coordinator, description: OukitelSensorDescription) -> None:
-        super().__init__(coordinator, description, description.tag)
+        super().__init__(coordinator, description, description.tag, description.subtag)
 
     @property
     def native_value(self) -> Any:
         value = self.coordinator.data.get(self._tag)
+        if self._subtag is not None:
+            value = value.get(self._subtag) if isinstance(value, dict) else None
         if value is None or isinstance(value, dict | bytes):
             return None
         return self.entity_description.value_fn(value)

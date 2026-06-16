@@ -110,6 +110,19 @@ def main() -> None:
     check("ttlv encode/decode num 73", dec.get(20) == 73)
     check("ttlv encode/decode num 230", dec.get(28) == 230)
 
+    # 10) struct (TTLV type 4) decodes to nested {subtag: value} — per-port telemetry.
+    #     TypeC Info (tag 8): sub 2=Typec1 power, sub 7=Typec4 power.
+    struct_blob = (
+        struct.pack(">H", (8 << 3) | 4)
+        + struct.pack(">H", 2)  # 2 sub-fields
+        + struct.pack(">H", (2 << 3) | 2)
+        + b"\x00\x05"  # sub 2 = 5
+        + struct.pack(">H", (7 << 3) | 2)
+        + b"\x00\x14"  # sub 7 = 20
+    )
+    dec_struct = proto.ttlv_decode(struct_blob)
+    check("struct tag8 nested sub-tags", dec_struct.get(8) == {2: 5, 7: 20})
+
     print(f"\nALL PASSED ({_passed} checks)")
 
 

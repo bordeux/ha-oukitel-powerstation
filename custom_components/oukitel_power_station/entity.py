@@ -16,11 +16,16 @@ class OukitelEntity(CoordinatorEntity[OukitelCoordinator]):
     _attr_has_entity_name = True
 
     def __init__(
-        self, coordinator: OukitelCoordinator, description: EntityDescription, tag: int
+        self,
+        coordinator: OukitelCoordinator,
+        description: EntityDescription,
+        tag: int,
+        subtag: int | None = None,
     ) -> None:
         super().__init__(coordinator)
         self.entity_description = description
         self._tag = tag
+        self._subtag = subtag
         dk = coordinator.dk
         self._attr_unique_id = f"{dk}_{description.key}"
         self._attr_translation_key = description.key
@@ -34,4 +39,9 @@ class OukitelEntity(CoordinatorEntity[OukitelCoordinator]):
 
     @property
     def available(self) -> bool:
-        return super().available and self._tag in self.coordinator.data
+        if not (super().available and self._tag in self.coordinator.data):
+            return False
+        if self._subtag is None:
+            return True
+        value = self.coordinator.data.get(self._tag)
+        return isinstance(value, dict) and self._subtag in value
