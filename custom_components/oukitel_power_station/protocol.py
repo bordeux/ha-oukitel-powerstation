@@ -27,6 +27,7 @@ from .const import (
     CMD_LOGIN_RESULT,
     CMD_NONCE,
     CMD_PING,
+    CMD_PONG,
     CMD_READ,
     CMD_REPORT,
     CMD_WRITE,
@@ -38,6 +39,12 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 MAGIC = b"\xaa\xaa"
+
+# Keepalive: send a p7 ping this often so the device keeps the session and
+# keeps streaming; if no frame arrives within the read timeout the socket is
+# treated as dead and the listener exits so the coordinator reconnects.
+_PING_INTERVAL = 20.0
+_READ_TIMEOUT = 90.0
 
 
 class OukitelError(Exception):
@@ -361,23 +368,57 @@ class OukitelConnection:
 
     def _dispatch(self, frames: list[tuple[int, int, bytes]]) -> None:
         for _pid, cmd, payload in frames:
-            if cmd == CMD_REPORT and self._iv is not None:
-                report = ttlv_decode(aes_decrypt(self._key, self._iv, payload)) if payload else {}
+            # Telemetry arrives as cmd20 reports AND as the reply to a cmd17 read;
+            # decode both so a polled read always refreshes state.
+            if cmd in (CMD_REPORT, CMD_READ) and self._iv is not None and payload:
+                try:
+                    report = ttlv_decode(aes_decrypt(self._key, self._iv, payload))
+                except Exception as err:  # tolerate a bad frame in the loop
+                    _LOGGER.debug("could not decode cmd %s payload: %s", cmd, err)
+                    continue
                 if report and self._on_report:
                     self._on_report(report)
-            # CMD_WRITE_ACK / CMD_PONG: nothing required for now
+            elif cmd not in (CMD_PONG, CMD_PING):
+                _LOGGER.debug("unhandled frame cmd=%s len=%s", cmd, len(payload))
 
-    async def listen(self) -> None:
-        """Background read loop: decode reports and push them via on_report."""
+    async def _keepalive(self) -> None:
+        """Send periodic p7 pings; on failure, close the socket to force a reconnect."""
         try:
             while True:
-                self._dispatch(await self._read_frames())
+                await asyncio.sleep(_PING_INTERVAL)
+                await self._ping()
+        except asyncio.CancelledError:
+            raise
+        except Exception as err:
+            _LOGGER.debug("keepalive ping failed (%s); closing socket", err)
+            if self._writer is not None:
+                self._writer.close()
+
+    async def listen(self) -> None:
+        """Background read loop: decode reports and push them via on_report.
+
+        Runs a keepalive ping concurrently and applies a read watchdog: if no
+        frame arrives within _READ_TIMEOUT the connection is considered dead and
+        this coroutine raises so the coordinator can reconnect.
+        """
+        ping_task = asyncio.create_task(self._keepalive())
+        try:
+            while True:
+                try:
+                    frames = await asyncio.wait_for(self._read_frames(), _READ_TIMEOUT)
+                except TimeoutError as err:
+                    raise OukitelError("no data within read timeout") from err
+                self._dispatch(frames)
         except asyncio.CancelledError:
             raise
         except OukitelError:
             raise
         except Exception as err:
             raise OukitelError(str(err)) from err
+        finally:
+            ping_task.cancel()
+            with contextlib.suppress(Exception):
+                await ping_task
 
     async def close(self) -> None:
         if self._writer is not None:
