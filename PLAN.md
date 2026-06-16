@@ -1,6 +1,6 @@
 # PLAN — Oukitel P2001E Plus → Home Assistant integration
 
-Engineering plan for a production-quality HA **custom integration** (`custom_components/oukitel/`),
+Engineering plan for a production-quality HA **custom integration** (`custom_components/oukitel_power_station/`),
 HACS-distributable, local-push at runtime, cloud only for one-time `authKey`. Protocol is fully
 reverse-engineered and verified — see `REVERSE_ENGINEERING.md`.
 
@@ -30,7 +30,7 @@ reverse-engineered and verified — see `REVERSE_ENGINEERING.md`.
 Status legend: ⬜ TODO · 🟦 IN PROGRESS · ✅ DONE · ⏭️ DEFERRED
 
 ### M0 — Scaffolding
-- ✅ M0.1 Create `custom_components/oukitel/` + `manifest.json` (iot_class=local_push, integration_type=device, v0.1.0)
+- ✅ M0.1 Create `custom_components/oukitel_power_station/` + `manifest.json` (iot_class=local_push, integration_type=device, v0.1.0)
 - ✅ M0.2 `const.py` — domain, ports, cmd codes, regions, read-list, enum maps, config keys
 - ✅ M0.3 Repo plumbing: `hacs.json`, `.gitignore` (apk/pcaps/secrets/tsl), `README.md` stub
 
@@ -95,7 +95,7 @@ Status legend: ⬜ TODO · 🟦 IN PROGRESS · ✅ DONE · ⏭️ DEFERRED
 - Per-port struct sub-field exact indices — names known from TSL; confirm order live when outputs ON.
 
 ## Handoff / quality checklist (M6.1)
-Integration in `custom_components/oukitel/` (13 modules, ~1.4k LOC). Verified locally: `ruff` clean,
+Integration in `custom_components/oukitel_power_station/` (13 modules, ~1.4k LOC). Verified locally: `ruff` clean,
 compiles under Python 3.13.9, offline tests pass, protocol verified live on the real device (reads).
 - ✅ async throughout · DataUpdateCoordinator (push) · `runtime_data` · typed · `local_push`
 - ✅ config flow + reauth · unique_id (dk) · device_info (+mac connection) · availability · entity categories

@@ -1,5 +1,5 @@
 [project]
-name = "ha-oukitel"
+name = "ha-oukitel-power-station"
 version = "0.1.0"
 description = "Home Assistant integration for Oukitel / Quectel power stations"
 requires-python = ">=3.13"

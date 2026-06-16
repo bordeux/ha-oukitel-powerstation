@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Final
 
-DOMAIN: Final = "oukitel"
+DOMAIN: Final = "oukitel_power_station"
 
 # ---- network ----
 DISCOVERY_PORT: Final = 6606  # UDP discovery broadcast

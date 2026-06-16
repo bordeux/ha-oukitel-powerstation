@@ -16,3 +16,9 @@ tools/
 .idea/
 .vscode/
 .venv/
+
+# brand-icon staging for a separate home-assistant/brands PR (not part of this repo)
+brands-pr/
+
+# build artifacts
+dist/

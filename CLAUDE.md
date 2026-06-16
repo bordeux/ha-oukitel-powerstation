@@ -7,7 +7,7 @@ power station, controlled by the **WonderFree** app. The station has WiFi + Blue
 ## Status (current)
 **Protocol fully reverse-engineered AND the HA integration is built & live-validated.**
 - Reverse engineering: complete, verified end-to-end on the real device (read + write).
-- Integration: `custom_components/oukitel/` (config flow + reauth, push coordinator, sensor/switch/
+- Integration: `custom_components/oukitel_power_station/` (config flow + reauth, push coordinator, sensor/switch/
   select/number, diagnostics, icons, strings/translations). Fully local at runtime after a one-time
   cloud `authKey` fetch.
 - Validated **live on the real network**: UDP discovery (same-subnet), handshake, AES read, write
@@ -17,8 +17,8 @@ power station, controlled by the **WonderFree** app. The station has WiFi + Blue
 - Git: initialized on branch **`master`**, remote `origin` = `git@github.com:bordeux/ha-oukitel-powerstation.git`. **Not committed yet.**
 
 **Remaining:** create the GitHub repo, commit & push; user installs in HA (HACS or copy
-`custom_components/oukitel/`) and runs the config flow. Optional: submit a brand icon to
-`home-assistant/brands` (`custom_integrations/oukitel/icon.png` 256×256).
+`custom_components/oukitel_power_station/`) and runs the config flow. Optional: submit a brand icon to
+`home-assistant/brands` (`custom_integrations/oukitel_power_station/icon.png` 256×256).
 
 ## ⭐ Read this first
 **`REVERSE_ENGINEERING.md` is the single source of truth** — full protocol, encryption, key
@@ -56,7 +56,7 @@ pk `p11wN7` · dk `aabbccddeeff` · **authKey `REDACTED_AUTHKEY`** · cloud EU
 (args or `QUECTEL_EMAIL` / `QUECTEL_PASSWORD` env vars).
 
 ## Integration design (as built)
-The protocol logic lives in `custom_components/oukitel/{protocol,cloud,discovery}.py` (the earlier
+The protocol logic lives in `custom_components/oukitel_power_station/{protocol,cloud,discovery}.py` (the earlier
 `tools/*.py` were the dev/RE prototypes, now gitignored/local-only).
 
 **Connect flow (config flow):** Step1 cloud login (region EU/US/CN + email + password) → fetch

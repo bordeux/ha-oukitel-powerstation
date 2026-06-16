@@ -18,7 +18,7 @@ once from the Quectel cloud using your account, then connects directly to the st
 2. Install **Oukitel Power Station**, then **restart Home Assistant**.
 3. **Settings → Devices & Services → Add Integration → Oukitel Power Station**.
 
-(Manual: copy `custom_components/oukitel/` into your HA `config/custom_components/`, restart.)
+(Manual: copy `custom_components/oukitel_power_station/` into your HA `config/custom_components/`, restart.)
 
 ## Setup flow
 1. **Cloud login** — region (EU/US/CN) + your WonderFree/Oukitel email & password. Used once to get

@@ -13,7 +13,7 @@ import struct
 import sys
 import types
 
-BASE = pathlib.Path(__file__).resolve().parents[1] / "custom_components" / "oukitel"
+BASE = pathlib.Path(__file__).resolve().parents[1] / "custom_components" / "oukitel_power_station"
 _pkg = types.ModuleType("ouk")
 _pkg.__path__ = [str(BASE)]
 sys.modules["ouk"] = _pkg
