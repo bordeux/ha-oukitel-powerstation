@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
   workflow_dispatch:
 
@@ -29,6 +29,9 @@ jobs:
 
       - name: Ruff format check
         run: ruff format --check custom_components/ tests/
+
+      - name: Install Home Assistant (for the import smoke test)
+        run: pip install homeassistant
 
       - name: Pytest
         run: pytest
