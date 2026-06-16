@@ -12,13 +12,26 @@ power station, controlled by the **WonderFree** app. The station has WiFi + Blue
   cloud `authKey` fetch.
 - Validated **live on the real network**: UDP discovery (same-subnet), handshake, AES read, write
   (USB toggle), and authKey-rotation re-fetch all confirmed.
-- Quality/CI: `ruff` clean, `pytest` green (synthetic fixtures), GitHub Actions (`ci.yml`:
-  ruff + pytest; `validate.yml`: hassfest + HACS). Repo **sanitized** (no device secrets tracked).
-- Git: initialized on branch **`master`**, remote `origin` = `git@github.com:bordeux/ha-oukitel-powerstation.git`. **Not committed yet.**
+- **Domain is `oukitel_power_station`** (NOT bare `oukitel`) — chosen so a hypothetical future
+  *official* Oukitel core integration can't collide (HA can't share a domain; core wins). The brands
+  folder name is forced to equal the domain.
+- Live-validated on HA **2026.2.3** (Python 3.14). Fixed a load-blocking bug: `DeviceInfo` must be
+  imported from `homeassistant.helpers.device_registry` (there is no `homeassistant.helpers.device_info`).
+- Quality/CI: `ruff` clean, `pytest` green. `ci.yml`: ruff + pytest, and now **installs Home Assistant
+  to run an import smoke test** (`tests/test_imports.py` imports every module against real HA — catches
+  broken HA imports that ruff/offline tests miss; self-skips without HA). `validate.yml`: hassfest +
+  HACS. `release.yml`: **release-please** (conventional commits → version bump in `manifest.json` +
+  CHANGELOG + tag + GitHub release that HACS consumes). `pr-lint.yml`: enforces Conventional-Commit PR
+  titles. All workflows trigger on **`master`**. Repo **sanitized** (no device secrets tracked).
+- Git: branch **`master`**, remote `origin` = `git@github.com:bordeux/ha-oukitel-powerstation.git`.
+  **Committed & pushed.** Author identity is the user's git config — leave it alone.
 
-**Remaining:** create the GitHub repo, commit & push; user installs in HA (HACS or copy
-`custom_components/oukitel_power_station/`) and runs the config flow. Optional: submit a brand icon to
-`home-assistant/brands` (`custom_integrations/oukitel_power_station/icon.png` 256×256).
+**Remaining:** submit the brand icon to `home-assistant/brands`
+(`custom_integrations/oukitel_power_station/{icon,icon@2x}.png`) — staged & ready in **`brands-pr/`**
+(gitignored; PNGs extracted from the WonderFree app launcher icon + `PR_STEPS.md`). Until merged, HACS
+shows "icon not available" (cosmetic; does NOT auto-fix from any other brand entry). Optional:
+DHCP autodiscovery (`manifest.json` `dhcp` matcher by MAC OUI `E485FB*` + `async_step_dhcp`).
+To ship a new version: open a PR with a conventional title, merge it, then merge the release-please PR.
 
 ## ⭐ Read this first
 **`REVERSE_ENGINEERING.md` is the single source of truth** — full protocol, encryption, key
@@ -85,7 +98,13 @@ Optionally first run a toggle test (flip AC/USB/DC in the app while logging on t
 - Repo is **sanitized for public release**: device `authKey`/`bindingCode`/account IDs are replaced
   with placeholders in tracked docs, and tests use **synthetic** vectors. Real device keys are never
   committed — they're fetched at runtime (cloud) or live only in gitignored `tools/` + the home-dir
-  agent memory. `.gitignore` excludes `apk/`, `tools/`, pcaps, `.mcp.json`, `.venv/`.
+  agent memory. `.gitignore` excludes `apk/`, `tools/`, pcaps, `.mcp.json`, `.venv/`, `dist/`,
+  `brands-pr/`.
+- **Releases are automated** (release-please): every change goes in via a PR with a Conventional-Commit
+  title; `fix:`→patch, `feat:`→minor, `feat!:`/`BREAKING CHANGE:`→major. Don't hand-bump
+  `manifest.json` `version` or create tags manually — merge the release-please PR instead. (One-time
+  GitHub UI setup: Settings → Actions → General → allow Actions to create PRs; add a branch-protection
+  rule requiring PRs into `master`.)
 - App-level constants (region base URLs, `appSecret`, `userDomain` in `const.py`) are extracted from
   the public APK and are the same for all users — they're required and intentionally kept.
 - Append new protocol findings to `REVERSE_ENGINEERING.md` (keep it the source of truth).
