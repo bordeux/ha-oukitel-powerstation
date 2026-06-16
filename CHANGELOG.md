@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/bordeux/ha-oukitel-powerstation/compare/v0.2.0...v0.2.1) (2026-06-16)
+
+
+### Bug Fixes
+
+* bound connect/handshake and don't recover on cancel ([dcf7e24](https://github.com/bordeux/ha-oukitel-powerstation/commit/dcf7e24f62b4ff3290c8f8cc312456372b24e0f7))
+
 ## [0.2.0](https://github.com/bordeux/ha-oukitel-powerstation/compare/v0.1.0...v0.2.0) (2026-06-16)
 
 
