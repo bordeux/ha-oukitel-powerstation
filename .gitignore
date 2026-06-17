@@ -6,8 +6,8 @@ apk/
 # Secrets / local data
 secrets.local
 .mcp.json
-# reverse-engineering / dev helpers (superseded by the integration; may contain device keys)
-tools/
+.env
+tools/.env
 **/__pycache__/
 *.pyc
 

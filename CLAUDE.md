@@ -97,9 +97,9 @@ Optionally first run a toggle test (flip AC/USB/DC in the app while logging on t
   `fix: handle authKey rotation`). No AI attribution anywhere in the repo history.
 - Repo is **sanitized for public release**: device `authKey`/`bindingCode`/account IDs are replaced
   with placeholders in tracked docs, and tests use **synthetic** vectors. Real device keys are never
-  committed — they're fetched at runtime (cloud) or live only in gitignored `tools/` + the home-dir
-  agent memory. `.gitignore` excludes `apk/`, `tools/`, pcaps, `.mcp.json`, `.venv/`, `dist/`,
-  `brands-pr/`.
+  committed — they're fetched at runtime (cloud) or, for the dev helpers in `tools/`, read from a
+  **gitignored `.env`** (see `.env.example`). `tools/` is now committed (sanitized); `.gitignore`
+  excludes `apk/`, pcaps, `.mcp.json`, `.env`, `.venv/`, `dist/`, `brands-pr/`.
 - **Releases are automated** (release-please): every change goes in via a PR with a Conventional-Commit
   title; `fix:`→patch, `feat:`→minor, `feat!:`/`BREAKING CHANGE:`→major. Don't hand-bump
   `manifest.json` `version` or create tags manually — merge the release-please PR instead. (One-time
