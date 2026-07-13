@@ -53,3 +53,6 @@ device. Per-port (AC/USB/TypeC/DC) detailed power/voltage sensors are planned.
 ## Credits / disclaimer
 Independent, unofficial integration for personal use with your own hardware. Not affiliated with
 Oukitel or Quectel.
+
+## License
+Released under the [MIT License](LICENSE).
