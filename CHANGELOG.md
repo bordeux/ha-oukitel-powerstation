@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.3.2](https://github.com/bordeux/ha-oukitel-powerstation/compare/v0.3.1...v0.3.2) (2026-09-02)
+
+
+### Bug Fixes
+
+* bound cloud HTTP requests and surface transport errors ([c341733](https://github.com/bordeux/ha-oukitel-powerstation/commit/c341733dfe5d31bf1b0e5a8425e9a40e395223d8)), closes [#6](https://github.com/bordeux/ha-oukitel-powerstation/issues/6)
+* stop transport errors escaping the cloud and local paths ([49a4de4](https://github.com/bordeux/ha-oukitel-powerstation/commit/49a4de40c2242b1adc9fd2d10d9a1c2c099c53cb))
+* surface local socket errors so the coordinator can recover ([26af41e](https://github.com/bordeux/ha-oukitel-powerstation/commit/26af41e84797fe4071865dc0ae16d2ea832c81bd))
+
 ## [0.3.1](https://github.com/bordeux/ha-oukitel-powerstation/compare/v0.3.0...v0.3.1) (2026-09-02)
 
 
