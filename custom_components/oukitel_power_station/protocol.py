@@ -52,6 +52,8 @@ _READ_TIMEOUT = 90.0
 # (or a half-open socket during a reload) blocks setup until HA's bootstrap
 # timeout, stalling the whole instance.
 _CONNECT_TIMEOUT = 15.0
+# Tearing down a socket must never outlive a reconnect attempt.
+_CLOSE_TIMEOUT = 5.0
 
 
 class OukitelError(Exception):
@@ -306,13 +308,19 @@ class OukitelConnection:
             assert self._iv is not None
             payload = aes_encrypt(self._key, self._iv, payload)
         pid = self._next_pid()
-        self._writer.write(build_frame(pid, cmd, payload))
-        await self._writer.drain()
+        try:
+            self._writer.write(build_frame(pid, cmd, payload))
+            await self._writer.drain()
+        except OSError as err:  # reset/broken pipe: report as ours so callers reconnect
+            raise OukitelError(f"send failed: {err}") from err
         return pid
 
     async def _read_frames(self) -> list[tuple[int, int, bytes]]:
         assert self._reader is not None
-        data = await self._reader.read(4096)
+        try:
+            data = await self._reader.read(4096)
+        except OSError as err:
+            raise OukitelError(f"read failed: {err}") from err
         if not data:
             raise OukitelError("connection closed by peer")
         return self._assembler.feed(data)
@@ -328,6 +336,12 @@ class OukitelConnection:
         except OukitelError:
             await self.close()
             raise
+        except OSError as err:
+            # e.g. EHOSTUNREACH after the station moved to another IP or dropped off
+            # WiFi. Must surface as OukitelError, otherwise it escapes the coordinator
+            # and its rediscovery/retry path never runs. See issue #6.
+            await self.close()
+            raise OukitelError(f"cannot reach {self._host}:{self._port}: {err}") from err
 
     async def _open_and_handshake(self) -> None:
         _LOGGER.debug("connecting to %s:%s", self._host, self._port)
@@ -453,6 +467,8 @@ class OukitelConnection:
     async def close(self) -> None:
         if self._writer is not None:
             self._writer.close()
+            # wait_closed() can block indefinitely against a peer that stopped reading,
+            # which would wedge the very path that recovers the connection.
             with contextlib.suppress(Exception):
-                await self._writer.wait_closed()
+                await asyncio.wait_for(self._writer.wait_closed(), _CLOSE_TIMEOUT)
         self._reader = self._writer = None

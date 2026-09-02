@@ -11,6 +11,7 @@ import base64
 import contextlib
 import importlib.util
 import pathlib
+import socket
 import struct
 import sys
 import types
@@ -108,6 +109,24 @@ def _ping_gets_pong() -> bool:
     return asyncio.run(run())
 
 
+def _connect_refused_error() -> object:
+    """connect() to a dead port must raise OukitelError, never a bare OSError."""
+
+    async def run() -> object:
+        sock = socket.socket()
+        sock.bind(("127.0.0.1", 0))
+        port = sock.getsockname()[1]
+        sock.close()  # nothing listening -> refused/unreachable
+        conn = proto.OukitelConnection("127.0.0.1", AUTH_KEY, port=port)
+        try:
+            await conn.connect()
+        except BaseException as err:  # the test inspects whatever escapes
+            return err
+        return None
+
+    return asyncio.run(run())
+
+
 def main() -> None:
     print("protocol offline tests")
 
@@ -180,6 +199,12 @@ def main() -> None:
     # 11) the device's ping (p7) is answered with a pong (p8) from the read loop,
     #     otherwise the station drops the session after a few seconds.
     check("ping is answered with pong", _ping_gets_pong())
+
+    # 12) a refused/unreachable TCP connect surfaces as OukitelError. A bare OSError
+    #     escapes the coordinator entirely and skips its IP-rediscovery path (issue #6).
+    err = _connect_refused_error()
+    check("connect failure is OukitelError", isinstance(err, proto.OukitelError))
+    check("connect failure is not a bare OSError", not isinstance(err, OSError))
 
     print(f"\nALL PASSED ({_passed} checks)")
 
