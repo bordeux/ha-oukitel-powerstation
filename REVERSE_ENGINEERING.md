@@ -378,7 +378,13 @@ enables AES → reads & decrypts all properties live. **Proven end-to-end** agai
 | **28729** (p9) | app→dev | heartbeat/subscribe interval | TTLV `(1,num 30)(2,num 1)` |
 
 Post-login the app sends: `cmd19 (tag100=3)` (subscribe) + `cmd17` (read all) + `cmd28729` (HB);
-device then streams `cmd20` reports. To set a switch: `cmd19` with `(tag, bool)` → device acks `p6`
+device then streams `cmd20` reports.
+
+**Keepalive (issue #7):** the device sends `p7`/28727 (ping) on its own and expects `p8`/28728
+(pong, empty payload) back. Ignoring the ping makes the station tear the TCP session down after a
+few seconds, so the client must answer every ping from its read loop. The subscribe+read+heartbeat
+triple must also be re-asserted well inside the advertised 30s heartbeat window — 20s was still too
+slow on some units; 12s is stable. To set a switch: `cmd19` with `(tag, bool)` → device acks `p6`
 + reports new value via `cmd20`.
 
 **✅ WRITE VERIFIED LIVE (M3.2):** sent `cmd19 (tag44=true)` then `(tag44=false)` to the real device
