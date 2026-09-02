@@ -6,7 +6,9 @@ Loads the integration's protocol/const modules without triggering the HA package
 
 from __future__ import annotations
 
+import asyncio
 import base64
+import contextlib
 import importlib.util
 import pathlib
 import struct
@@ -52,6 +54,58 @@ def check(name: str, cond: bool) -> None:
     assert cond, f"FAIL: {name}"
     _passed += 1
     print(f"  ok  {name}")
+
+
+class _FakeWriter:
+    """Minimal StreamWriter stand-in that records the frames written to it."""
+
+    def __init__(self) -> None:
+        self.sent: list[bytes] = []
+
+    def write(self, data: bytes) -> None:
+        self.sent.append(data)
+
+    async def drain(self) -> None:
+        return None
+
+    def close(self) -> None:
+        return None
+
+
+class _FakeReader:
+    """Yields the queued chunks once, then blocks forever."""
+
+    def __init__(self, chunks: list[bytes]) -> None:
+        self._chunks = list(chunks)
+
+    async def read(self, _n: int) -> bytes:
+        if self._chunks:
+            return self._chunks.pop(0)
+        await asyncio.Event().wait()
+        return b""
+
+
+def _ping_gets_pong() -> bool:
+    """listen() must reply CMD_PONG when the device sends CMD_PING."""
+
+    async def run() -> bool:
+        conn = proto.OukitelConnection("127.0.0.1", AUTH_KEY)
+        writer = _FakeWriter()
+        conn._writer = writer
+        conn._reader = _FakeReader([proto.build_frame(7, const.CMD_PING, b"")])
+        conn._iv = NONCE.encode()
+        task = asyncio.create_task(conn.listen())
+        for _ in range(50):  # let the read loop run without depending on wall time
+            await asyncio.sleep(0)
+            if writer.sent:
+                break
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
+        cmds = [proto.FrameAssembler().feed(frame)[0][1] for frame in writer.sent]
+        return cmds == [const.CMD_PONG]
+
+    return asyncio.run(run())
 
 
 def main() -> None:
@@ -122,6 +176,10 @@ def main() -> None:
     )
     dec_struct = proto.ttlv_decode(struct_blob)
     check("struct tag8 nested sub-tags", dec_struct.get(8) == {2: 5, 7: 20})
+
+    # 11) the device's ping (p7) is answered with a pong (p8) from the read loop,
+    #     otherwise the station drops the session after a few seconds.
+    check("ping is answered with pong", _ping_gets_pong())
 
     print(f"\nALL PASSED ({_passed} checks)")
 

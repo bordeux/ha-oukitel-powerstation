@@ -43,9 +43,10 @@ MAGIC = b"\xaa\xaa"
 
 # Keepalive: the device stops streaming unless the subscription + heartbeat are
 # re-asserted within the heartbeat window (it advertises interval=30s), so re-arm
-# every 20s. If no frame arrives within the read timeout the socket is treated as
+# every 12s -- 20s proved too slow in the field and the stream died after a few
+# reports. If no frame arrives within the read timeout the socket is treated as
 # dead and the listener exits so the coordinator reconnects.
-_REARM_INTERVAL = 20.0
+_REARM_INTERVAL = 12.0
 _READ_TIMEOUT = 90.0
 # Bound the TCP connect + handshake; without this a slow/unresponsive device
 # (or a half-open socket during a reload) blocks setup until HA's bootstrap
@@ -363,14 +364,7 @@ class OukitelConnection:
         raise OukitelAuthError("no login result (p5) received")
 
     async def _rearm(self) -> None:
-        """Re-assert HF reporting + heartbeat so the device keeps streaming."""
-        await self._send(
-            CMD_WRITE, ttlv_encode([(TAG_HF_REPORTING, "num", HF_REPORTING_LAN_WIFI)]), encrypt=True
-        )
-        await self._send(CMD_HEARTBEAT, ttlv_encode([(1, "num", 30), (2, "num", 1)]), encrypt=True)
-
-    async def subscribe_and_read(self) -> None:
-        """Enable high-frequency reporting, request a full snapshot, send heartbeat."""
+        """Re-assert HF reporting, snapshot read and heartbeat to keep the stream alive."""
         await self._send(
             CMD_WRITE, ttlv_encode([(TAG_HF_REPORTING, "num", HF_REPORTING_LAN_WIFI)]), encrypt=True
         )
@@ -378,6 +372,10 @@ class OukitelConnection:
             CMD_READ, b"".join(struct.pack(">H", t) for t in READ_TAG_IDS), encrypt=True
         )
         await self._send(CMD_HEARTBEAT, ttlv_encode([(1, "num", 30), (2, "num", 1)]), encrypt=True)
+
+    async def subscribe_and_read(self) -> None:
+        """Enable high-frequency reporting, request a full snapshot, send heartbeat."""
+        await self._rearm()
 
     async def async_set(self, tag: int, value: object, *, is_bool: bool) -> None:
         """Write a single property (cmd19)."""
@@ -435,6 +433,11 @@ class OukitelConnection:
                     frames = await asyncio.wait_for(self._read_frames(), _READ_TIMEOUT)
                 except TimeoutError as err:
                     raise OukitelError("no data within read timeout") from err
+                # The device pings us and drops the session if it is not answered.
+                for _pid, cmd, _payload in frames:
+                    if cmd == CMD_PING:
+                        _LOGGER.debug("ping received; sending pong")
+                        await self._send(CMD_PONG)
                 self._dispatch(frames)
         except asyncio.CancelledError:
             raise
