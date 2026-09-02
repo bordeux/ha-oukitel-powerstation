@@ -7,12 +7,16 @@ Run:  python3 tests/test_cloud.py
 
 from __future__ import annotations
 
+import asyncio
 import base64
+import contextlib
 import hashlib
 import importlib.util
 import pathlib
 import sys
 import types
+
+import aiohttp
 
 BASE = pathlib.Path(__file__).resolve().parents[1] / "custom_components" / "oukitel_power_station"
 _pkg = types.ModuleType("ouk")
@@ -48,6 +52,47 @@ def check(name: str, cond: bool) -> None:
     print(f"  ok  {name}")
 
 
+class _FakeResponse:
+    status = 200
+
+    async def json(self, content_type: object = None) -> dict:
+        return {"code": 200, "data": {}}
+
+
+class _FakeSession:
+    """Records request kwargs; optionally raises instead of responding."""
+
+    def __init__(self, raises: BaseException | None = None) -> None:
+        self.raises = raises
+        self.kwargs: dict = {}
+
+    def request(self, _method: str, _url: str, **kwargs):
+        self.kwargs = kwargs
+        raises = self.raises
+
+        @contextlib.asynccontextmanager
+        async def _cm():
+            if raises is not None:
+                raise raises
+            yield _FakeResponse()
+
+        return _cm()
+
+
+def _request_with(session) -> object:
+    """Run one OukitelCloud request against a fake session; return the raised error or None."""
+
+    async def run():
+        client = cloud.OukitelCloud(session, "EU")
+        try:
+            await client._get("/x", {})
+        except BaseException as err:  # the test inspects whatever escapes
+            return err
+        return None
+
+    return asyncio.run(run())
+
+
 def main() -> None:
     print("cloud login crypto parity tests")
     email = "user@example.com"
@@ -74,6 +119,20 @@ def main() -> None:
     check("fields keys", set(fields) == {"pwd", "email", "random", "userDomain", "signature"})
     check("userDomain set", fields["userDomain"] == USER_DOMAIN)
     check("random preserved", fields["random"] == RANDOM)
+
+    # 5) every request is bounded (issue #6: a black-holed route must not hang the
+    #    coordinator) and transport failures surface as OukitelCloudError, which is the
+    #    only cloud exception the config flow and coordinator handle.
+    ok_session = _FakeSession()
+    check("plain request succeeds", _request_with(ok_session) is None)
+    timeout = ok_session.kwargs.get("timeout")
+    check("request passes a ClientTimeout", isinstance(timeout, aiohttp.ClientTimeout))
+    check("timeout total is bounded", 0 < (timeout.total or 0) <= 60)
+
+    conn_err = _request_with(_FakeSession(aiohttp.ClientConnectionError("no route")))
+    check("ClientError -> OukitelCloudError", isinstance(conn_err, cloud.OukitelCloudError))
+    to_err = _request_with(_FakeSession(TimeoutError()))
+    check("TimeoutError -> OukitelCloudError", isinstance(to_err, cloud.OukitelCloudError))
 
     print(f"\nALL PASSED ({_passed} checks)")
 

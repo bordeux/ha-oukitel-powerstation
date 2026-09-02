@@ -11,8 +11,10 @@ import base64
 import hashlib
 import logging
 import secrets
-from typing import TYPE_CHECKING, Any
+from typing import Any
 import uuid
+
+import aiohttp
 
 from .const import (
     PATH_BUSINESS_ATTRS,
@@ -23,10 +25,13 @@ from .const import (
 )
 from .protocol import aes_encrypt
 
-if TYPE_CHECKING:
-    from aiohttp import ClientSession
-
 _LOGGER = logging.getLogger(__name__)
+
+# Every cloud call sits on a path that must not stall Home Assistant: setup, the authKey
+# re-fetch, and the opt-in poll (which runs inside the coordinator update). aiohttp has no
+# default timeout, so a firewalled/black-holed route would hang the request -- and with it
+# the update loop -- until the OS gave up. See issue #6.
+_HTTP_TIMEOUT = aiohttp.ClientTimeout(total=20, connect=10)
 
 _ALPHANUM = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 
@@ -74,7 +79,7 @@ def build_login_fields(
 class OukitelCloud:
     """Minimal async client for the endpoints we need."""
 
-    def __init__(self, session: ClientSession, region: str) -> None:
+    def __init__(self, session: aiohttp.ClientSession, region: str) -> None:
         if region not in REGIONS:
             raise OukitelCloudError(f"unknown region: {region}")
         self._session = session
@@ -132,16 +137,31 @@ class OukitelCloud:
 
     # --- http helpers ---
     async def _post_form(self, path: str, fields: dict[str, str]) -> dict[str, Any]:
-        async with self._session.post(
-            self.base + path, data=fields, headers=_headers(self._token)
-        ) as resp:
-            return await self._parse(resp)
+        return await self._request("POST", path, data=fields)
 
     async def _get(self, path: str, params: dict[str, str]) -> dict[str, Any]:
-        async with self._session.get(
-            self.base + path, params=params, headers=_headers(self._token)
-        ) as resp:
-            return await self._parse(resp)
+        return await self._request("GET", path, params=params)
+
+    async def _request(self, method: str, path: str, **kwargs: Any) -> dict[str, Any]:
+        """Perform one bounded request, mapping transport failures to OukitelCloudError.
+
+        Callers (config flow, authKey re-fetch, cloud poll) only handle OukitelCloudError,
+        so a raw aiohttp/timeout error escaping here would break the coordinator instead of
+        being retried on the next cycle.
+        """
+        try:
+            async with self._session.request(
+                method,
+                self.base + path,
+                headers=_headers(self._token),
+                timeout=_HTTP_TIMEOUT,
+                **kwargs,
+            ) as resp:
+                return await self._parse(resp)
+        except TimeoutError as err:
+            raise OukitelCloudError(f"timed out after {_HTTP_TIMEOUT.total}s: {path}") from err
+        except aiohttp.ClientError as err:
+            raise OukitelCloudError(f"request failed: {err}") from err
 
     @staticmethod
     async def _parse(resp: Any) -> dict[str, Any]:
