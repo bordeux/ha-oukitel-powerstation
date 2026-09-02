@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.1](https://github.com/bordeux/ha-oukitel-powerstation/compare/v0.3.0...v0.3.1) (2026-09-02)
+
+
+### Bug Fixes
+
+* answer device pings to keep the local connection alive ([0cbc136](https://github.com/bordeux/ha-oukitel-powerstation/commit/0cbc1369f0d31cffa3581ca196f2d0d15a9d4429))
+* answer device pings to keep the local connection alive ([7504dcc](https://github.com/bordeux/ha-oukitel-powerstation/commit/7504dcc8f423242bf0b9df37a256a7b3b7900d44)), closes [#7](https://github.com/bordeux/ha-oukitel-powerstation/issues/7)
+
 ## [0.3.0](https://github.com/bordeux/ha-oukitel-powerstation/compare/v0.2.2...v0.3.0) (2026-06-16)
 
 
