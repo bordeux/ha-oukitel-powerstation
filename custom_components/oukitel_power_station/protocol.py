@@ -294,6 +294,11 @@ class OukitelConnection:
         self._packet_id = 1000
         self._reader_task: asyncio.Task | None = None
         self._ack_waiters: dict[int, asyncio.Future] = {}
+        # Per-session frame tallies by command. A device that acks writes but never
+        # reports shows up here as tx {19,17,28729} climbing while rx holds only
+        # 28726 -- the signature we could not see at all before.
+        self._tx_counts: dict[int, int] = {}
+        self._rx_counts: dict[int, int] = {}
 
     # --- low level ---
     def _next_pid(self) -> int:
@@ -313,6 +318,7 @@ class OukitelConnection:
             await self._writer.drain()
         except OSError as err:  # reset/broken pipe: report as ours so callers reconnect
             raise OukitelError(f"send failed: {err}") from err
+        self._tx_counts[cmd] = self._tx_counts.get(cmd, 0) + 1
         return pid
 
     async def _read_frames(self) -> list[tuple[int, int, bytes]]:
@@ -402,8 +408,17 @@ class OukitelConnection:
             CMD_READ, b"".join(struct.pack(">H", t) for t in READ_TAG_IDS), encrypt=True
         )
 
+    def stats(self) -> str:
+        """Compact per-session frame tally, for debug logs and diagnostics."""
+
+        def fmt(counts: dict[int, int]) -> str:
+            return "{" + ", ".join(f"{cmd}:{n}" for cmd, n in sorted(counts.items())) + "}"
+
+        return f"tx={fmt(self._tx_counts)} rx={fmt(self._rx_counts)}"
+
     def _dispatch(self, frames: list[tuple[int, int, bytes]]) -> None:
         for _pid, cmd, payload in frames:
+            self._rx_counts[cmd] = self._rx_counts.get(cmd, 0) + 1
             # Telemetry arrives as cmd20 reports AND as the reply to a cmd17 read;
             # decode both so a polled read always refreshes state.
             if cmd in (CMD_REPORT, CMD_READ) and self._iv is not None and payload:
@@ -425,7 +440,7 @@ class OukitelConnection:
             while True:
                 await asyncio.sleep(_REARM_INTERVAL)
                 await self._rearm()
-                _LOGGER.debug("re-armed reporting (subscribe + heartbeat)")
+                _LOGGER.debug("re-armed reporting (subscribe + read + heartbeat); %s", self.stats())
         except asyncio.CancelledError:
             raise
         except Exception as err:

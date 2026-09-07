@@ -423,6 +423,14 @@ Fetched via `GET https://iot-api.quecteleu.com/v2/binding/enduserapi/productTSL?
 | **8** | typec_data | TypeC Info | STRUCT | sub: typec1..typec4 output power(W) |
 | **9** | dc_data | DC Info | STRUCT | sub: DC switch, CAR1 power(W)/voltage(V)/current(A) |
 
+Telemetry can stall while the session stays healthy (issue #6, observed 2026-09-07): after a
+Home Assistant restart the station completed the `p2..p5` handshake (login result **0**), acked every
+`cmd19` write with `p6`, and sent **zero** `cmd20` reports and no reply to `cmd17` — for over 6
+minutes, to two independent clients at once. Re-writing `tag100` (including 0 then 3, to force a
+change rather than an idempotent write) did not restart the stream. So the stall is device-wide, not
+bound to one session. The station was firewalled off the internet at the time, which is the leading
+explanation: local telemetry appears to require cloud reachability.
+
 Note on the input-power tags (issue #12): tags 11/12 are the **charging** share only, not the total
 draw from the source. Tag 4 (`total_input_power`) is everything coming in, so charging from AC with a
 load on the AC output gives `tag4 = tag11 + AC output power` (reported: 570 = 500 + 70).
