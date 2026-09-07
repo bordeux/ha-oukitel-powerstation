@@ -37,7 +37,17 @@ AC charging input power, DC charging input power, Temperature, Inverter version,
 
 > Total input power is everything drawn from the source; the AC/DC *charging* input power sensors
 > count only the share going into the battery. Charging from AC while a load sits on the AC output,
-> the difference is that passthrough load.
+> the difference is that passthrough load. Verified live on a P1500: full battery → `ac charging
+> input power` reads 0 W while total input = total output = 156 W (pure passthrough); charging →
+> 329 W in = 175 W charging + 154 W to the loads.
+
+## Energy dashboard
+The power sensors are `device_class: power` (W), not `energy` (kWh) — the station reports no
+cumulative counter, and the integration deliberately doesn't fabricate one. For the Energy
+dashboard add an **Integration — Riemann sum integral** helper on **Total input power**
+(kilo, hours, left) and pick the resulting kWh sensor. Name helpers explicitly: *Total input
+energy* for the wall draw, *AC charging energy* for the charging-only sensor (an "AC input energy"
+helper would wrongly suggest it also covers passthrough power).
 
 **Switches:** AC output, USB output, DC output.
 **Select:** Output voltage (100–240 V), Output frequency (50/60 Hz).
