@@ -282,11 +282,13 @@ class OukitelConnection:
         auth_key_b64: str,
         on_report: Callable[[dict[int, object]], None] | None = None,
         port: int = 6607,
+        read_tags: tuple[int, ...] | None = None,
     ) -> None:
         self._host = host
         self._port = port
         self._key = auth_key_to_key(auth_key_b64)
         self._on_report = on_report
+        self._read_tags = read_tags if read_tags is not None else READ_TAG_IDS
         self._reader: asyncio.StreamReader | None = None
         self._writer: asyncio.StreamWriter | None = None
         self._assembler = FrameAssembler()
@@ -388,9 +390,7 @@ class OukitelConnection:
         await self._send(
             CMD_WRITE, ttlv_encode([(TAG_HF_REPORTING, "num", HF_REPORTING_LAN_WIFI)]), encrypt=True
         )
-        await self._send(
-            CMD_READ, b"".join(struct.pack(">H", t) for t in READ_TAG_IDS), encrypt=True
-        )
+        await self.async_read_all()
         await self._send(CMD_HEARTBEAT, ttlv_encode([(1, "num", 30), (2, "num", 1)]), encrypt=True)
 
     async def subscribe_and_read(self) -> None:
@@ -405,7 +405,7 @@ class OukitelConnection:
 
     async def async_read_all(self) -> None:
         await self._send(
-            CMD_READ, b"".join(struct.pack(">H", t) for t in READ_TAG_IDS), encrypt=True
+            CMD_READ, b"".join(struct.pack(">H", t) for t in self._read_tags), encrypt=True
         )
 
     def stats(self) -> str:

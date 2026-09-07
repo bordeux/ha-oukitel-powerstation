@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
+import logging
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
+from .const import CONF_MANIFEST, CONF_PK, DEFAULT_MODEL
 from .coordinator import OukitelCoordinator
+from .manifest import ProductManifest, resolve_manifest
+
+_LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[Platform] = [
     Platform.SENSOR,
@@ -18,9 +24,32 @@ PLATFORMS: list[Platform] = [
 type OukitelConfigEntry = ConfigEntry[OukitelCoordinator]
 
 
+async def _async_resolve_manifest(hass: HomeAssistant, entry: ConfigEntry) -> ProductManifest:
+    """Resolve the product manifest off the event loop (file I/O).
+
+    Entry snapshot → bundled TSL → empty fallback (entities gated off rather
+    than guessed, e.g. a brand-new product key with no network).
+    """
+    pk = str(entry.data.get(CONF_PK) or "")
+    snapshot = entry.data.get(CONF_MANIFEST)
+    manifest = await hass.async_add_executor_job(resolve_manifest, pk, snapshot, None)
+    if manifest is None:
+        _LOGGER.warning("no product manifest for pk=%s — entities unavailable", pk)
+        manifest = ProductManifest(
+            product_key=pk,
+            model=DEFAULT_MODEL,
+            tsl_version=None,
+            tags={},
+            code_to_tag={},
+            excluded_tags=(),
+        )
+    return manifest
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: OukitelConfigEntry) -> bool:
     """Set up Oukitel Power Station from a config entry."""
-    coordinator = OukitelCoordinator(hass, entry)
+    manifest = await _async_resolve_manifest(hass, entry)
+    coordinator = OukitelCoordinator(hass, entry, manifest)
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

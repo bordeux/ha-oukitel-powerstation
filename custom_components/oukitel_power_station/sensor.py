@@ -167,7 +167,16 @@ async def async_setup_entry(
 ) -> None:
     """Set up sensors."""
     coordinator = entry.runtime_data
-    async_add_entities(OukitelSensor(coordinator, desc) for desc in SENSORS)
+    manifest = coordinator.manifest
+    async_add_entities(
+        OukitelSensor(coordinator, desc)
+        for desc in SENSORS
+        if (
+            manifest.has_subtag(desc.tag, desc.subtag)
+            if desc.subtag is not None
+            else manifest.has_tag(desc.tag)
+        )
+    )
 
 
 class OukitelSensor(OukitelEntity, SensorEntity):

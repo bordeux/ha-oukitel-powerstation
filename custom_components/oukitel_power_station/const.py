@@ -34,7 +34,8 @@ DISCOVERY_CMD: Final = 28721  # p1 — station's discovery reply
 TAG_HF_REPORTING: Final = 100
 HF_REPORTING_LAN_WIFI: Final = 3
 
-# read-list: the tag ids the app requests in a cmd17 (full snapshot)
+# Fallback read-list when no product manifest can be resolved (the list the app
+# requests in a cmd17 on the P2001E Plus). Runtime uses the manifest's list.
 READ_TAG_IDS: Final = (2, 8, 9, 6, 31, 7, 28, 27, 14, 12, 11, 5, 4, 3, 1, 34, 20, 100, 43, 44, 46)
 
 # ---- cloud (per region): base url, app secret (DOMAIN_SECRET), user domain ----
@@ -73,6 +74,7 @@ CONF_DK: Final = "dk"  # deviceKey (== MAC, lowercase, no separators)
 CONF_AUTH_KEY: Final = "auth_key"
 CONF_HOST: Final = "host"  # station LAN IP
 CONF_NAME: Final = "name"
+CONF_MANIFEST: Final = "manifest"  # product manifest snapshot taken at setup
 CONF_CLOUD_POLL: Final = "cloud_poll"  # opt-in: fetch cloud-only values (temp/voltage)
 
 # Tags the device never sends over the LAN; only available from the cloud snapshot.
@@ -90,6 +92,7 @@ VOLTAGE_OPTIONS: Final = {
     240: "240 V",
 }
 
-# manufacturer / model for the device registry
+# manufacturer for the device registry (model comes from the product manifest;
+# DEFAULT_MODEL is only the fallback when no manifest can be resolved at all)
 MANUFACTURER: Final = "Oukitel"
 DEFAULT_MODEL: Final = "P2001E Plus"
