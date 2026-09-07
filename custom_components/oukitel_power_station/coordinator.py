@@ -122,6 +122,11 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
             await conn.connect()
         except OukitelAuthError as err:
             await conn.close()
+            if self._auth_refetched:
+                # already tried a fresh key this outage — credentials, not the key
+                raise ConfigEntryAuthFailed(
+                    f"local login still rejected after authKey refresh ({err})"
+                ) from err
             _LOGGER.debug("auth rejected (%s); refetching authKey", err)
             await self._refetch_auth_key()
             raise UpdateFailed("auth key rotated; refetched, retrying") from err
@@ -141,6 +146,7 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
         self._connected_at = self.hass.loop.time()
         self._last_report = None
         self._reconnects += 1
+        self._auth_refetched = False  # key proved good — allow a future silent refresh
         _LOGGER.debug("connected to %s; subscribing", self.dk)
         # Start the reader before subscribing: if the subscribe fails we must not be
         # left holding a connection nobody reads.
@@ -178,23 +184,39 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
         self._last_report = None
 
     async def _refetch_auth_key(self) -> None:
-        """Re-fetch authKey from the cloud using stored credentials (reauth on failure)."""
+        """Re-fetch authKey from the cloud using stored credentials.
+
+        Tries the ``userDeviceList`` copy first (read-only); only if the local
+        login already rejected it do we need the key the device actually has,
+        so when the list key differs it is proven stale and we fall back to
+        ``regenerateAuthKey`` — the app's own fetch and the only working source
+        for shared accounts (their list copy is frozen at binding time).
+        """
         data = self.config_entry.data
         session = async_get_clientsession(self.hass)
         cloud = OukitelCloud(session, data[CONF_REGION])
         try:
             await cloud.login(data[CONF_EMAIL], data[CONF_PASSWORD])
             devices = await cloud.get_devices()
+            match = next(
+                (d for d in devices if (d.get("deviceKey") or "").lower() == self.dk), None
+            )
+            auth_key = (match or {}).get("authKey")
+            if auth_key and auth_key != data.get(CONF_AUTH_KEY):
+                _LOGGER.debug("authKey from userDeviceList differs — using it")
+            else:
+                _LOGGER.debug("userDeviceList key unchanged/missing — regenerating")
+                auth_key = await cloud.regenerate_auth_key(data[CONF_PK], self.dk)
         except OukitelCloudAuthError as err:
             raise ConfigEntryAuthFailed(str(err)) from err
         except OukitelCloudError as err:
             raise UpdateFailed(f"cloud error: {err}") from err
-        match = next((d for d in devices if (d.get("deviceKey") or "").lower() == self.dk), None)
-        if not match or not match.get("authKey"):
+        if not auth_key:
             raise ConfigEntryAuthFailed("device not found on account")
-        _LOGGER.debug("authKey refetched from cloud for %s", self.dk)
+        _LOGGER.debug("authKey refreshed from cloud for %s", self.dk)
+        self._auth_refetched = True
         self.hass.config_entries.async_update_entry(
-            self.config_entry, data={**data, CONF_AUTH_KEY: match["authKey"]}
+            self.config_entry, data={**data, CONF_AUTH_KEY: auth_key}
         )
 
     async def _poll_cloud_if_due(self) -> None:

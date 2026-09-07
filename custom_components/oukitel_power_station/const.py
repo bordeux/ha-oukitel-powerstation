@@ -63,6 +63,10 @@ PATH_DEVICE_LIST: Final = "/v2/binding/enduserapi/userDeviceList"
 PATH_PRODUCT_TSL: Final = "/v2/binding/enduserapi/productTSL"
 # Current property values (returns every tag, incl. ones the LAN never sends).
 PATH_BUSINESS_ATTRS: Final = "/v2/binding/enduserapi/getDeviceBusinessAttributes"
+# Returns the CURRENT device authKey (the app uses it as its normal fetch). For shared
+# accounts the userDeviceList copy is frozen at binding time and local login with it
+# fails — this endpoint is the only working fetch there.
+PATH_REGENERATE_AUTH_KEY: Final = "/v2/binding/enduserapi/regenerateAuthKey"
 
 # ---- config entry keys ----
 CONF_REGION: Final = "region"

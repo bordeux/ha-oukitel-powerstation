@@ -21,6 +21,7 @@ from .const import (
     PATH_DEVICE_LIST,
     PATH_LOGIN,
     PATH_PRODUCT_TSL,
+    PATH_REGENERATE_AUTH_KEY,
     REGIONS,
 )
 from .protocol import aes_encrypt
@@ -111,6 +112,22 @@ class OukitelCloud:
         """Return the product thing-model (data-point dictionary)."""
         data = await self._get(PATH_PRODUCT_TSL, {"pk": pk})
         return data.get("data") or {}
+
+    async def regenerate_auth_key(self, pk: str, dk: str) -> str:
+        """Return the CURRENT device authKey (the app's own fetch endpoint).
+
+        For shared accounts the ``userDeviceList`` copy is frozen at binding
+        time and local login with it fails (p5=-1) — this endpoint returns the
+        live key. Verified live on a shared P1500 account (2026-09-06):
+        repeated calls return the same value and the vendor app keeps working,
+        so the feared rotation does not happen in practice; the cloud merely
+        re-pushes the key the device already has.
+        """
+        data = await self._post_form(PATH_REGENERATE_AUTH_KEY, {"pk": pk, "dk": dk})
+        auth_key = (data.get("data") or {}).get("authKey")
+        if not auth_key:
+            raise OukitelCloudError("regenerateAuthKey returned no authKey")
+        return str(auth_key)
 
     async def get_business_attributes(self, pk: str, dk: str) -> dict[int, Any]:
         """Return current scalar property values from the cloud as {tag_id: value}.

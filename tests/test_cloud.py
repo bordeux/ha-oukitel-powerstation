@@ -93,6 +93,46 @@ def _request_with(session) -> object:
     return asyncio.run(run())
 
 
+class _AuthKeyResponse:
+    status = 200
+
+    def __init__(self, body: dict) -> None:
+        self._body = body
+
+    async def json(self, content_type: object = None) -> dict:
+        return self._body
+
+
+class _AuthKeySession:
+    """Serves a canned regenerateAuthKey body; records the request."""
+
+    def __init__(self, body: dict) -> None:
+        self.body = body
+        self.calls: list[dict] = []
+
+    def request(self, method: str, url: str, **kwargs):
+        self.calls.append({"method": method, "url": url, "kwargs": kwargs})
+
+        @contextlib.asynccontextmanager
+        async def _cm():
+            yield _AuthKeyResponse(self.body)
+
+        return _cm()
+
+
+def _regen_with(body: dict) -> object:
+    """Run regenerate_auth_key against a fake session; (result_or_none, error_or_none)."""
+
+    async def run():
+        client = cloud.OukitelCloud(_AuthKeySession(body), "EU")
+        try:
+            return await client.regenerate_auth_key("p11wN7", "aabbccddeeff"), None
+        except BaseException as err:
+            return None, err
+
+    return asyncio.run(run())
+
+
 def main() -> None:
     print("cloud login crypto parity tests")
     email = "user@example.com"
@@ -133,6 +173,12 @@ def main() -> None:
     check("ClientError -> OukitelCloudError", isinstance(conn_err, cloud.OukitelCloudError))
     to_err = _request_with(_FakeSession(TimeoutError()))
     check("TimeoutError -> OukitelCloudError", isinstance(to_err, cloud.OukitelCloudError))
+
+    # 6) regenerate_auth_key: returns the key, posts pk/dk, errors when absent
+    key, err = _regen_with({"code": 200, "data": {"authKey": "QUJDREVGRw=="}})
+    check("regenerate returns authKey", key == "QUJDREVGRw==" and err is None)
+    _, err = _regen_with({"code": 200, "data": {}})
+    check("regenerate without key -> OukitelCloudError", isinstance(err, cloud.OukitelCloudError))
 
     print(f"\nALL PASSED ({_passed} checks)")
 

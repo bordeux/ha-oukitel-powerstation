@@ -224,8 +224,13 @@ packetID / cmd` header stays in clear. Encryption is enabled only **after** a su
   `bindingCode` (BLE-only devices) → **`authKey`** → `bindingkey` fallback.
 - Region base URLs (`ag0`): EU `https://iot-api.quecteleu.com`, US `https://iot-api.quectelus.com`,
   CN `https://iot-gateway.quectel.com`. WS south: `wss://iot-south.quecteleu.com:8443/ws/v2`.
-- ⚠️ The endpoint is `regenerate` — calling it may rotate the key (cloud pushes new key to device).
-  Prefer to capture the value the app already uses, or check for a non-regenerating `getAuthKey`.
+- ⚠️ ~~The endpoint is `regenerate` — calling it may rotate the key (cloud pushes new key to device).~~
+  **Resolved 2026-09-06 (P1500, shared account, live):** repeated `regenerateAuthKey` calls return
+  the **same** key deterministically and the vendor app keeps working — the cloud just re-pushes
+  the key the device already has. It is the app's normal authKey fetch, and the **only working
+  fetch for shared accounts**: their `userDeviceList` copy is frozen at binding time and local
+  login with it fails (`p5=-1`). Prefer `userDeviceList` (read-only); fall back to
+  `regenerateAuthKey` when the list key proves stale (unchanged, yet login rejected).
 
 ---
 
@@ -451,7 +456,7 @@ The fetch generalizes: `productTSL?pk=<pk>` returns the dictionary for any Quect
 ENUM values for switches are booleans; struct sub-fields are nested TTLV (decode recursively).
 
 ## 12. Open questions / risks
-- Does `regenerateAuthKey` rotate the device's key (breaking the app)? Find a read-only variant if so.
+- ~~Does `regenerateAuthKey` rotate the device's key (breaking the app)?~~ **Resolved:** no rotation observed — see §7 note.
 - Exact TTLV tag dictionary for the P2001E (the data-point map) — to be derived in step 11.2.
 - Cloud login/auth signing scheme (needed for a self-contained HA integration without MITM).
 - Bluetooth (BLE) path uses the **same** TTLV + AES handshake (`ak3`) if a WiFi-less fallback is wanted.
