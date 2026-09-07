@@ -33,7 +33,12 @@ once from the Quectel cloud using your account, then connects directly to the st
 
 ## Entities
 **Sensors:** Battery %, Remaining time, Charging time, Total input power, Total output power,
-AC input power, DC input power, Temperature, Inverter version, BMS version.
+AC charging input power, DC charging input power, Temperature, Inverter version, BMS version.
+
+> Total input power is everything drawn from the source; the AC/DC *charging* input power sensors
+> count only the share going into the battery. Charging from AC while a load sits on the AC output,
+> the difference is that passthrough load.
+
 **Switches:** AC output, USB output, DC output.
 **Select:** Output voltage (100–240 V), Output frequency (50/60 Hz).
 **Number:** AC charge limit (%).
