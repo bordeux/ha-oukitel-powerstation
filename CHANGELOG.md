@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.4](https://github.com/bordeux/ha-oukitel-powerstation/compare/v0.3.3...v0.3.4) (2026-09-07)
+
+
+### Bug Fixes
+
+* detect and recover when the station stops streaming telemetry ([964dd3d](https://github.com/bordeux/ha-oukitel-powerstation/commit/964dd3d3a1db81b281e2b2af41fae773c085704b))
+* detect and recover when the station stops streaming telemetry ([99d941c](https://github.com/bordeux/ha-oukitel-powerstation/commit/99d941cf8d11014c817033236510a34c81e196a2)), closes [#6](https://github.com/bordeux/ha-oukitel-powerstation/issues/6)
+
 ## [0.3.3](https://github.com/bordeux/ha-oukitel-powerstation/compare/v0.3.2...v0.3.3) (2026-09-07)
 
 
