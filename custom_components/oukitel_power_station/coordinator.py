@@ -256,9 +256,10 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
             stats = self._conn.stats() if self._conn else "no session"
             _LOGGER.warning(
                 "%s: connected and writes are being acked, but no telemetry for %.0fs "
-                "(%s). Dropping the session to resubscribe. If this repeats, the station "
-                "is most likely unable to reach the Quectel cloud -- check for a firewall "
-                "rule blocking its internet access -- or another app holds its report stream",
+                "(%s). Dropping the session to resubscribe. The usual cause is the station "
+                "having no internet access: it keeps serving the handshake and writes, but "
+                "only streams telemetry while it can reach the Quectel cloud. Check for a "
+                "firewall rule blocking it (see issue #6)",
                 self.dk,
                 age,
                 stats,

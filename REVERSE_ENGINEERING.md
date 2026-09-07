@@ -423,13 +423,24 @@ Fetched via `GET https://iot-api.quecteleu.com/v2/binding/enduserapi/productTSL?
 | **8** | typec_data | TypeC Info | STRUCT | sub: typec1..typec4 output power(W) |
 | **9** | dc_data | DC Info | STRUCT | sub: DC switch, CAR1 power(W)/voltage(V)/current(A) |
 
-Telemetry can stall while the session stays healthy (issue #6, observed 2026-09-07): after a
-Home Assistant restart the station completed the `p2..p5` handshake (login result **0**), acked every
-`cmd19` write with `p6`, and sent **zero** `cmd20` reports and no reply to `cmd17` — for over 6
-minutes, to two independent clients at once. Re-writing `tag100` (including 0 then 3, to force a
-change rather than an idempotent write) did not restart the stream. So the stall is device-wide, not
-bound to one session. The station was firewalled off the internet at the time, which is the leading
-explanation: local telemetry appears to require cloud reachability.
+### ⚠️ The station needs internet access to stream LAN telemetry (CONFIRMED 2026-09-07, issue #6)
+
+The local link is *not* fully independent of the cloud. With the station firewalled off the internet
+(UniFi policy, destination `Internet`, both Block and Reject):
+
+- `p2..p5` handshake completes normally — login result **0**, encryption on.
+- every `cmd19` write is acked with `p6` (23 of 23 over 7 minutes).
+- **zero** `cmd20` reports arrive, and `cmd17` reads are never answered.
+- the stall is **device-wide**, not per-session: two independent clients saw it simultaneously.
+- re-writing `tag100` — including 0 then 3, to force a change rather than an idempotent write — does
+  not restart the stream.
+
+Removing the firewall rule restored telemetry **within seconds**, with no reconnect needed: the
+device resumes streaming over the existing session. So the station apparently gates its LAN reporting
+on having a live cloud connection, while still serving the handshake and writes without one.
+
+Practical consequence: an integration cannot distinguish this from a healthy session by looking at
+the socket — only by noticing that no telemetry has arrived (see the coordinator's stall detection).
 
 Note on the input-power tags (issue #12): tags 11/12 are the **charging** share only, not the total
 draw from the source. Tag 4 (`total_input_power`) is everything coming in, so charging from AC with a
