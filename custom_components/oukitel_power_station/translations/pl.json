@@ -1,0 +1,94 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Logowanie do chmury Oukitel",
+        "description": "Zaloguj się kontem WonderFree / Oukitel (tym samym co w aplikacji mobilnej). Używane jednorazowo do pobrania klucza urządzenia; później sterowanie działa lokalnie.",
+        "data": {
+          "region": "Region",
+          "email": "E-mail",
+          "password": "Hasło"
+        }
+      },
+      "device": {
+        "title": "Wybierz urządzenie",
+        "data": {
+          "dk": "Urządzenie"
+        }
+      },
+      "manual": {
+        "title": "Adres IP stacji",
+        "description": "Stacji nie znaleziono automatycznie. Podaj jej adres IP w sieci lokalnej.",
+        "data": {
+          "host": "Adres IP"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Ponowne uwierzytelnienie",
+        "description": "Podaj ponownie hasło dla {email}, aby odświeżyć klucz urządzenia.",
+        "data": {
+          "password": "Hasło"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Nieprawidłowe dane logowania.",
+      "cannot_connect": "Nie można połączyć.",
+      "no_devices": "Na tym koncie nie znaleziono urządzeń."
+    },
+    "abort": {
+      "already_configured": "To urządzenie jest już skonfigurowane.",
+      "reauth_successful": "Ponowne uwierzytelnienie powiodło się."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opcje",
+        "data": {
+          "cloud_poll": "Pobieraj temperaturę i napięcie z chmury"
+        },
+        "data_description": {
+          "cloud_poll": "To urządzenie nie wysyła temperatury ani napięcia wyjściowego po sieci lokalnej. Włącz, aby odpytywać chmurę Quectel co kilka minut (zapisanymi poświadczeniami) i uzupełniać te wartości. Domyślnie wyłączone, aby działanie było w pełni lokalne."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "battery": { "name": "Poziom naładowania akumulatora" },
+      "remaining_time": { "name": "Pozostały czas pracy" },
+      "charging_time": { "name": "Czas ładowania" },
+      "total_input_power": { "name": "Moc wejściowa całkowita" },
+      "total_output_power": { "name": "Moc wyjściowa całkowita" },
+      "ac_input_power": { "name": "Moc ładowania AC" },
+      "dc_input_power": { "name": "Moc ładowania DC" },
+      "temperature": { "name": "Temperatura urządzenia" },
+      "inverter_version": { "name": "Wersja firmware falownika" },
+      "bms_version": { "name": "Wersja firmware BMS" },
+      "ac_output_power": { "name": "Moc wyjściowa AC" },
+      "ac_output_voltage": { "name": "Napięcie wyjściowe AC" },
+      "usb_qc1_power": { "name": "Moc USB-A" },
+      "usb_qc2_power": { "name": "Moc USB-C (QC)" },
+      "typec1_power": { "name": "Moc Type-C 1" },
+      "typec2_power": { "name": "Moc Type-C 2" },
+      "typec3_power": { "name": "Moc Type-C 3" },
+      "typec4_power": { "name": "Moc Type-C 4" },
+      "dc_output_power": { "name": "Moc wyjściowa DC (car)" },
+      "dc_output_voltage": { "name": "Napięcie wyjściowe DC (car)" },
+      "dc_output_current": { "name": "Prąd wyjściowy DC (car)" }
+    },
+    "switch": {
+      "ac_output": { "name": "Wyjście AC" },
+      "usb_output": { "name": "Wyjście USB" },
+      "dc_output": { "name": "Wyjście DC" }
+    },
+    "select": {
+      "output_voltage": { "name": "Napięcie wyjściowe" },
+      "output_frequency": { "name": "Częstotliwość wyjściowa" }
+    },
+    "number": {
+      "ac_charge_limit": { "name": "Limit ładowania AC" }
+    }
+  }
+}
