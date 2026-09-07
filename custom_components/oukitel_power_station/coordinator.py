@@ -19,6 +19,7 @@ from .const import (
     CLOUD_POLL_INTERVAL_S,
     CONF_AUTH_KEY,
     CONF_CLOUD_POLL,
+    CONF_CLOUD_POLL_INTERVAL,
     CONF_DK,
     CONF_EMAIL,
     CONF_HOST,
@@ -93,8 +94,14 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
         return self.config_entry.data[CONF_DK]
 
     @property
-    def host(self) -> str:
-        return self.config_entry.data[CONF_HOST]
+    def host(self) -> str | None:
+        """The last known LAN IP of the station (None = cloud-only)."""
+        return self.config_entry.data.get(CONF_HOST)
+
+    @property
+    def local_capable(self) -> bool:
+        """True when this entry has a LAN address and can do local control."""
+        return bool(self.host)
 
     @property
     def manifest(self) -> ProductManifest:
@@ -123,6 +130,8 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
             _LOGGER.debug("connection has no live listener; dropping it")
             await self._reset_connection()
         host = self.host
+        if not host:
+            return  # cloud-only station: never opens a local session
         _LOGGER.debug("(re)connecting to %s at %s", self.dk, host)
         conn = OukitelConnection(
             host,
@@ -202,11 +211,15 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
         except OukitelCloudError as err:
             raise UpdateFailed(f"cloud error: {err}") from err
         match = next((d for d in devices if (d.get("deviceKey") or "").lower() == self.dk), None)
-        if not match or not match.get("authKey"):
-            raise ConfigEntryAuthFailed("device not found on account")
-        _LOGGER.debug("authKey refetched from cloud for %s", self.dk)
+        match = next((d for d in devices if (d.get("deviceKey") or "").lower() == self.dk), None)
+        auth_key = (match or {}).get("authKey")
+        if not auth_key or auth_key == data.get(CONF_AUTH_KEY):
+            # list key unchanged/missing (shared accounts freeze it at binding
+            # time) — fetch the live key the device has
+            auth_key = await cloud.regenerate_auth_key(data[CONF_PK], self.dk)
+        _LOGGER.debug("authKey refreshed from cloud for %s", self.dk)
         self.hass.config_entries.async_update_entry(
-            self.config_entry, data={**data, CONF_AUTH_KEY: match["authKey"]}
+            self.config_entry, data={**data, CONF_AUTH_KEY: auth_key}
         )
 
     async def _poll_cloud_if_due(self) -> None:
@@ -242,7 +255,33 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
         """Age of the last report if the device has gone quiet, else None."""
         return stall_age(self.hass.loop.time(), self._last_report, self._connected_at)
 
+    async def _update_cloud_only(self) -> dict[int, Any]:
+        """Cloud-only mode: serve everything from the cloud shadow."""
+        now = self.hass.loop.time()
+        interval = float(
+            self.config_entry.options.get(CONF_CLOUD_POLL_INTERVAL, CLOUD_POLL_INTERVAL_S)
+        )
+        if self._last_cloud_poll and now - self._last_cloud_poll < interval:
+            return dict(self._state)
+        self._last_cloud_poll = now
+        data = self.config_entry.data
+        try:
+            if self._cloud is None:
+                self._cloud = OukitelCloud(async_get_clientsession(self.hass), data[CONF_REGION])
+            await self._cloud.login(data[CONF_EMAIL], data[CONF_PASSWORD])
+            attrs = await self._cloud.get_business_attributes(data[CONF_PK], self.dk)
+        except OukitelCloudAuthError as err:
+            raise ConfigEntryAuthFailed(str(err)) from err
+        except OukitelCloudError as err:
+            raise UpdateFailed(f"cloud poll failed: {err}") from err
+        if attrs:
+            self._state.update(attrs)
+        return dict(self._state)
+
     async def _async_update_data(self) -> dict[int, Any]:
+        if not self.local_capable:
+            return await self._update_cloud_only()
+
         # Two attempts: a session the device reset between polls fails on the first
         # send, and reconnecting takes well under a second. Retrying here keeps that
         # invisible instead of blanking every entity until the next cycle.
@@ -284,6 +323,10 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
 
     # --- control ---
     async def async_set_value(self, tag: int, value: Any, *, is_bool: bool) -> None:
+        if not self.local_capable:
+            raise OukitelError(
+                "no local link to the station — control unavailable (cloud shadow is read-only)"
+            )
         try:
             await self._ensure_connected()
         except Exception:

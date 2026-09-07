@@ -18,8 +18,12 @@ import voluptuous as vol
 
 from .cloud import OukitelCloud, OukitelCloudAuthError, OukitelCloudError
 from .const import (
+    CLOUD_POLL_INTERVAL_MAX_S,
+    CLOUD_POLL_INTERVAL_MIN_S,
+    CLOUD_POLL_INTERVAL_S,
     CONF_AUTH_KEY,
     CONF_CLOUD_POLL,
+    CONF_CLOUD_POLL_INTERVAL,
     CONF_DK,
     CONF_EMAIL,
     CONF_HOST,
@@ -117,7 +121,20 @@ class OukitelConfigFlow(ConfigFlow, domain=DOMAIN):
         host = await async_discover(dk)
         if host:
             return await self._validate_and_create(host)
-        return await self.async_step_manual()
+        return await self.async_step_connect_mode()
+
+    async def async_step_connect_mode(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """The station was not discovered — manual IP, or cloud-only."""
+        if user_input is not None:
+            if user_input["mode"] == "manual":
+                return await self.async_step_manual()
+            return await self._validate_and_create(host=None)
+        schema = vol.Schema(
+            {vol.Required("mode", default="manual"): vol.In(["manual", "cloud_only"])}
+        )
+        return self.async_show_form(step_id="connect_mode", data_schema=schema)
 
     async def async_step_manual(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         errors: dict[str, str] = {}
@@ -128,10 +145,24 @@ class OukitelConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
     async def _validate_and_create(
-        self, host: str, errors: dict[str, str] | None = None
+        self, host: str | None, errors: dict[str, str] | None = None
     ) -> ConfigFlowResult:
         errors = errors if errors is not None else {}
         auth_key = self._device["authKey"]
+        if host is None:
+            # cloud-only station: no handshake by construction (the shadow is
+            # read via the account credentials, already validated at login)
+            return self.async_create_entry(
+                title=self._device.get("deviceName") or self._device["deviceKey"],
+                data={
+                    **self._creds,
+                    CONF_PK: self._device["productKey"],
+                    CONF_DK: self._device["deviceKey"],
+                    CONF_AUTH_KEY: auth_key,
+                    CONF_HOST: None,
+                    CONF_NAME: self._device.get("deviceName"),
+                },
+            )
         conn = OukitelConnection(host, auth_key)
         try:
             await conn.connect()
@@ -219,11 +250,26 @@ class OukitelConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class OukitelOptionsFlow(OptionsFlow):
-    """Options: opt in to fetching cloud-only values (temperature, voltage)."""
+    """Options: cloud poll (local stations) / poll interval (cloud-only)."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         if user_input is not None:
             return self.async_create_entry(data=user_input)
-        current = self.config_entry.options.get(CONF_CLOUD_POLL, False)
-        schema = vol.Schema({vol.Required(CONF_CLOUD_POLL, default=current): bool})
+        options = self.config_entry.options
+        if self.config_entry.data.get(CONF_HOST):
+            schema = vol.Schema(
+                {vol.Required(CONF_CLOUD_POLL, default=options.get(CONF_CLOUD_POLL, False)): bool}
+            )
+        else:
+            schema = vol.Schema(
+                {
+                    vol.Required(
+                        CONF_CLOUD_POLL_INTERVAL,
+                        default=options.get(CONF_CLOUD_POLL_INTERVAL, CLOUD_POLL_INTERVAL_S),
+                    ): vol.All(
+                        vol.Coerce(int),
+                        vol.Range(min=CLOUD_POLL_INTERVAL_MIN_S, max=CLOUD_POLL_INTERVAL_MAX_S),
+                    )
+                }
+            )
         return self.async_show_form(step_id="init", data_schema=schema)
