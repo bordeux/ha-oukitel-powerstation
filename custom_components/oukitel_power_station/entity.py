@@ -39,6 +39,10 @@ class OukitelEntity(CoordinatorEntity[OukitelCoordinator]):
 
     @property
     def available(self) -> bool:
+        # tag < 0 marks entities not backed by a protocol tag (e.g. the
+        # reload button) — availability is theirs to decide.
+        if self._tag < 0:
+            return super().available
         if not (super().available and self._tag in self.coordinator.data):
             return False
         if self._subtag is None:

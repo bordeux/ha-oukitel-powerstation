@@ -10,7 +10,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import OukitelConfigEntry
-from .const import FREQUENCY_OPTIONS, VOLTAGE_OPTIONS
+from .const import CONF_ENABLE_CONTROL, FREQUENCY_OPTIONS, VOLTAGE_OPTIONS
 from .entity import OukitelEntity
 
 
@@ -43,7 +43,9 @@ async def async_setup_entry(
     entry: OukitelConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Set up selects."""
+    """Set up selects when control is enabled."""
+    if not entry.options.get(CONF_ENABLE_CONTROL, False):
+        return
     coordinator = entry.runtime_data
     async_add_entities(OukitelSelect(coordinator, desc) for desc in SELECTS)
 
