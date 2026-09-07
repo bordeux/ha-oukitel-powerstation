@@ -423,6 +423,10 @@ Fetched via `GET https://iot-api.quecteleu.com/v2/binding/enduserapi/productTSL?
 | **8** | typec_data | TypeC Info | STRUCT | sub: typec1..typec4 output power(W) |
 | **9** | dc_data | DC Info | STRUCT | sub: DC switch, CAR1 power(W)/voltage(V)/current(A) |
 
+Note on the input-power tags (issue #12): tags 11/12 are the **charging** share only, not the total
+draw from the source. Tag 4 (`total_input_power`) is everything coming in, so charging from AC with a
+load on the AC output gives `tag4 = tag11 + AC output power` (reported: 570 = 500 + 70).
+
 Notes: ENUM `27/28` are sent/received as the enum *key* (e.g. `28`→`230` means 230V; `27`→`0` means 50Hz).
 The fetch generalizes: `productTSL?pk=<pk>` returns the dictionary for any Quectel product.
 ENUM values for switches are booleans; struct sub-fields are nested TTLV (decode recursively).
