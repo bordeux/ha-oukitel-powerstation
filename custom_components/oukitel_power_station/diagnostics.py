@@ -29,5 +29,8 @@ async def async_get_config_entry_diagnostics(
     return {
         "entry_data": async_redact_data(dict(entry.data), TO_REDACT),
         "available": coordinator.last_update_success,
+        # Connection health: a session that is up and acking writes while
+        # last_report_age_s keeps climbing means the station has stopped streaming.
+        "connection": coordinator.connection_diagnostics(),
         "telemetry": {str(tag): _jsonable(val) for tag, val in (coordinator.data or {}).items()},
     }

@@ -36,6 +36,31 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 _UPDATE_INTERVAL = timedelta(seconds=60)
+# A healthy station streams cmd20 reports continuously. It can however sit in a state
+# where it completes the handshake and acks every write while never sending telemetry
+# (observed with the device unable to reach the Quectel cloud). Nothing else notices:
+# the acks keep the read loop fed so the protocol read watchdog stays happy, and the
+# update method only *sends* a read, so it would report success on stale data forever.
+_REPORT_TIMEOUT = 150.0
+
+
+def stall_age(
+    now: float,
+    last_report: float | None,
+    connected_at: float | None,
+    timeout: float = _REPORT_TIMEOUT,
+) -> float | None:
+    """Return how long telemetry has been missing, or None if the stream looks healthy.
+
+    Measured from the last report, or from the connect time when none has arrived yet,
+    so a fresh session gets a grace period before being declared stalled. Pure, so the
+    policy can be tested without a Home Assistant instance.
+    """
+    reference = last_report or connected_at
+    if reference is None:
+        return None
+    age = now - reference
+    return age if age > timeout else None
 
 
 class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
@@ -57,6 +82,9 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
         self._auth_refetched = False
         self._cloud: OukitelCloud | None = None
         self._last_cloud_poll: float = 0.0
+        self._last_report: float | None = None
+        self._connected_at: float | None = None
+        self._reconnects = 0
 
     @property
     def dk(self) -> str:
@@ -69,15 +97,24 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
     # --- connection lifecycle ---
     def _handle_report(self, report: dict[int, Any]) -> None:
         _LOGGER.debug("report=%s", report)
+        self._last_report = self.hass.loop.time()
         # Replace, don't merge: a read returns the full struct, so replacing lets a
         # port that turned off (dropped/zeroed sub-tag) actually clear instead of
         # keeping its last non-zero value forever.
         self._state.update(report)
         self.async_set_updated_data(dict(self._state))
 
+    def _listening(self) -> bool:
+        return self._listen_task is not None and not self._listen_task.done()
+
     async def _ensure_connected(self) -> None:
-        if self._conn is not None:
+        if self._conn is not None and self._listening():
             return
+        if self._conn is not None:
+            # A connection without a running reader decodes nothing: reads would be
+            # sent into a void and the cached state returned as if it were fresh.
+            _LOGGER.debug("connection has no live listener; dropping it")
+            await self._reset_connection()
         host = self.host
         _LOGGER.debug("(re)connecting to %s at %s", self.dk, host)
         conn = OukitelConnection(host, self.config_entry.data[CONF_AUTH_KEY], self._handle_report)
@@ -101,11 +138,20 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
                 _LOGGER.debug("connect to %s failed (%s); discovery found %s", host, err, new_ip)
             raise UpdateFailed(f"cannot connect to {host}") from err
         self._conn = conn
+        self._connected_at = self.hass.loop.time()
+        self._last_report = None
+        self._reconnects += 1
         _LOGGER.debug("connected to %s; subscribing", self.dk)
-        await conn.subscribe_and_read()
+        # Start the reader before subscribing: if the subscribe fails we must not be
+        # left holding a connection nobody reads.
         self._listen_task = self.config_entry.async_create_background_task(
             self.hass, self._listen(), name=f"{DOMAIN}_listen_{self.dk}"
         )
+        try:
+            await conn.subscribe_and_read()
+        except OukitelError:
+            await self._reset_connection()
+            raise
 
     async def _listen(self) -> None:
         assert self._conn is not None
@@ -120,9 +166,16 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
             await self.async_request_refresh()
 
     async def _reset_connection(self) -> None:
+        task = self._listen_task
+        self._listen_task = None
+        # _listen() calls this from inside the listen task itself; never cancel self.
+        if task is not None and task is not asyncio.current_task() and not task.done():
+            task.cancel()
         if self._conn is not None:
             await self._conn.close()
             self._conn = None
+        self._connected_at = None
+        self._last_report = None
 
     async def _refetch_auth_key(self) -> None:
         """Re-fetch authKey from the cloud using stored credentials (reauth on failure)."""
@@ -173,25 +226,59 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
             _LOGGER.debug("cloud poll merged %s", updates)
             self._state.update(updates)
 
+    def _telemetry_stalled(self) -> float | None:
+        """Age of the last report if the device has gone quiet, else None."""
+        return stall_age(self.hass.loop.time(), self._last_report, self._connected_at)
+
     async def _async_update_data(self) -> dict[int, Any]:
-        try:
-            await self._ensure_connected()
-            assert self._conn is not None
-            await self._conn.async_read_all()
-        except ConfigEntryAuthFailed:
-            raise
-        except UpdateFailed:
+        # Two attempts: a session the device reset between polls fails on the first
+        # send, and reconnecting takes well under a second. Retrying here keeps that
+        # invisible instead of blanking every entity until the next cycle.
+        for attempt in (1, 2):
+            try:
+                await self._ensure_connected()
+                assert self._conn is not None
+                await self._conn.async_read_all()
+                break
+            except ConfigEntryAuthFailed:
+                raise
+            except UpdateFailed:
+                await self._reset_connection()
+                raise
+            except OukitelError as err:
+                await self._reset_connection()
+                if attempt == 1:
+                    _LOGGER.debug("read failed (%s); reconnecting and retrying once", err)
+                    continue
+                raise UpdateFailed(str(err)) from err
+
+        if (age := self._telemetry_stalled()) is not None:
+            stats = self._conn.stats() if self._conn else "no session"
+            _LOGGER.warning(
+                "%s: connected and writes are being acked, but no telemetry for %.0fs "
+                "(%s). Dropping the session to resubscribe. The usual cause is the station "
+                "having no internet access: it keeps serving the handshake and writes, but "
+                "only streams telemetry while it can reach the Quectel cloud. Check for a "
+                "firewall rule blocking it (see issue #6)",
+                self.dk,
+                age,
+                stats,
+            )
             await self._reset_connection()
-            raise
-        except OukitelError as err:
-            await self._reset_connection()
-            raise UpdateFailed(str(err)) from err
+            raise UpdateFailed(f"no telemetry for {age:.0f}s")
+
         await self._poll_cloud_if_due()
         return dict(self._state)
 
     # --- control ---
     async def async_set_value(self, tag: int, value: Any, *, is_bool: bool) -> None:
-        await self._ensure_connected()
+        try:
+            await self._ensure_connected()
+        except Exception:
+            # Never leave a half-set-up connection behind on a failed write; the next
+            # update would treat it as usable and read into a void.
+            await self._reset_connection()
+            raise
         assert self._conn is not None
         try:
             await self._conn.async_set(tag, value, is_bool=is_bool)
@@ -201,6 +288,18 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
         # optimistic local update; device will also echo a report
         self._state[tag] = bool(value) if is_bool else value
         self.async_set_updated_data(dict(self._state))
+
+    def connection_diagnostics(self) -> dict[str, Any]:
+        """Connection health for the diagnostics download."""
+        now = self.hass.loop.time()
+        return {
+            "connected": self._conn is not None,
+            "listener_running": self._listening(),
+            "reconnects": self._reconnects,
+            "connected_for_s": round(now - self._connected_at, 1) if self._connected_at else None,
+            "last_report_age_s": round(now - self._last_report, 1) if self._last_report else None,
+            "frames": self._conn.stats() if self._conn else None,
+        }
 
     async def async_shutdown(self) -> None:
         await super().async_shutdown()

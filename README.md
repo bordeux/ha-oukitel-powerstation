@@ -31,6 +31,12 @@ once from the Quectel cloud using your account, then connects directly to the st
 
 > Tip: give the station a DHCP reservation. If its IP changes, the integration re-discovers it by MAC.
 
+> ⚠️ **Do not block the station's internet access.** Control and polling stay local, but the station
+> only streams its telemetry once it has a live cloud connection. Firewalled off the internet it still
+> completes the handshake and acks commands, yet sends no data at all — so every sensor goes
+> unavailable while the device looks perfectly reachable. This is device behaviour, not something the
+> integration can work around. See issue #6.
+
 ## Entities
 **Sensors:** Battery %, Remaining time, Charging time, Total input power, Total output power,
 AC charging input power, DC charging input power, Temperature, Inverter version, BMS version.
