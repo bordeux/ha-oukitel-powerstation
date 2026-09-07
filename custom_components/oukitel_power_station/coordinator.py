@@ -28,6 +28,7 @@ from .const import (
     DOMAIN,
 )
 from .discovery import async_discover
+from .manifest import ProductManifest
 from .protocol import OukitelAuthError, OukitelConnection, OukitelError
 
 if TYPE_CHECKING:
@@ -68,7 +69,7 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
 
     config_entry: OukitelConfigEntry
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, manifest: ProductManifest) -> None:
         super().__init__(
             hass,
             _LOGGER,
@@ -86,6 +87,7 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
         self._connected_at: float | None = None
         self._reconnects = 0
         self.options = dict(entry.options)
+        self._manifest = manifest
 
     @property
     def dk(self) -> str:
@@ -94,6 +96,11 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
     @property
     def host(self) -> str:
         return self.config_entry.data[CONF_HOST]
+
+    @property
+    def manifest(self) -> ProductManifest:
+        """The product manifest (TSL-derived capability model)."""
+        return self._manifest
 
     # --- connection lifecycle ---
     def _handle_report(self, report: dict[int, Any]) -> None:
@@ -118,7 +125,12 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
             await self._reset_connection()
         host = self.host
         _LOGGER.debug("(re)connecting to %s at %s", self.dk, host)
-        conn = OukitelConnection(host, self.config_entry.data[CONF_AUTH_KEY], self._handle_report)
+        conn = OukitelConnection(
+            host,
+            self.config_entry.data[CONF_AUTH_KEY],
+            self._handle_report,
+            read_tags=self._manifest.read_tag_ids(),
+        )
         try:
             await conn.connect()
         except OukitelAuthError as err:

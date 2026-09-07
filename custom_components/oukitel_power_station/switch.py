@@ -38,7 +38,10 @@ async def async_setup_entry(
 ) -> None:
     """Set up switches."""
     coordinator = entry.runtime_data
-    async_add_entities(OukitelSwitch(coordinator, desc) for desc in SWITCHES)
+    manifest = coordinator.manifest
+    async_add_entities(
+        OukitelSwitch(coordinator, desc) for desc in SWITCHES if manifest.has_tag(desc.tag)
+    )
 
 
 class OukitelSwitch(OukitelEntity, SwitchEntity):

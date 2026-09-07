@@ -23,6 +23,7 @@ from .const import (
     CONF_DK,
     CONF_EMAIL,
     CONF_HOST,
+    CONF_MANIFEST,
     CONF_NAME,
     CONF_PASSWORD,
     CONF_PK,
@@ -32,9 +33,17 @@ from .const import (
     REGIONS,
 )
 from .discovery import async_discover
+from .manifest import build_manifest
 from .protocol import OukitelAuthError, OukitelConnection, OukitelError
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _device_label(device: dict[str, Any]) -> str:
+    """Human label for the picker: deviceName plus the product name."""
+    name = str(device.get("deviceName") or device["deviceKey"])
+    product = str(device.get("productName") or device.get("productKey") or "")
+    return f"{name} ({product})" if product and product not in name else name
 
 
 class OukitelConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -96,7 +105,7 @@ class OukitelConfigFlow(ConfigFlow, domain=DOMAIN):
             self._device = next(d for d in self._devices if d["deviceKey"] == dk)
             return await self.async_step_locate()
 
-        options = {d["deviceKey"]: f"{d.get('deviceName', d['deviceKey'])}" for d in self._devices}
+        options = {d["deviceKey"]: _device_label(d) for d in self._devices}
         schema = vol.Schema({vol.Required(CONF_DK): vol.In(options)})
         return self.async_show_form(step_id="device", data_schema=schema)
 
@@ -161,6 +170,18 @@ class OukitelConfigFlow(ConfigFlow, domain=DOMAIN):
                 data_schema=vol.Schema({vol.Required(CONF_HOST): str}),
                 errors=errors,
             )
+        # Capture the product thing-model so the runtime never needs the cloud
+        # to know the model's entities (bundled TSL is the offline fallback).
+        manifest: dict[str, Any] = {}
+        try:
+            session = async_get_clientsession(self.hass)
+            cloud = OukitelCloud(session, self._creds[CONF_REGION])
+            await cloud.login(self._creds[CONF_EMAIL], self._creds[CONF_PASSWORD])
+            tsl = await cloud.get_tsl(self._device["productKey"])
+        except (OukitelCloudAuthError, OukitelCloudError) as err:
+            _LOGGER.debug("productTSL fetch failed (bundled fallback): %s", err)
+        else:
+            manifest = build_manifest(tsl).to_dict()
         return self.async_create_entry(
             title=self._device.get("deviceName") or self._device["deviceKey"],
             data={
@@ -170,6 +191,7 @@ class OukitelConfigFlow(ConfigFlow, domain=DOMAIN):
                 CONF_AUTH_KEY: auth_key,
                 CONF_HOST: host,
                 CONF_NAME: self._device.get("deviceName"),
+                CONF_MANIFEST: manifest,
             },
         )
 
