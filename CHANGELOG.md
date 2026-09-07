@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.3](https://github.com/bordeux/ha-oukitel-powerstation/compare/v0.3.2...v0.3.3) (2026-09-07)
+
+
+### Bug Fixes
+
+* name the AC/DC input sensors as charging input power ([e061e68](https://github.com/bordeux/ha-oukitel-powerstation/commit/e061e68f867f89343791c1ed1fbde75b08c5f2ee))
+* name the AC/DC input sensors as charging input power ([844f369](https://github.com/bordeux/ha-oukitel-powerstation/commit/844f3690b66363c9636753bcc7a18ea9ca32b7f1)), closes [#12](https://github.com/bordeux/ha-oukitel-powerstation/issues/12)
+
 ## [0.3.2](https://github.com/bordeux/ha-oukitel-powerstation/compare/v0.3.1...v0.3.2) (2026-09-02)
 
 
