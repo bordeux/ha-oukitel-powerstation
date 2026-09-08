@@ -22,6 +22,7 @@ from .const import (
     CONF_CLOUD_POLL,
     CONF_DK,
     CONF_EMAIL,
+    CONF_ENABLE_CONTROL,
     CONF_HOST,
     CONF_NAME,
     CONF_PASSWORD,
@@ -197,11 +198,18 @@ class OukitelConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class OukitelOptionsFlow(OptionsFlow):
-    """Options: opt in to fetching cloud-only values (temperature, voltage)."""
+    """Options: opt in to cloud-only values; opt in to local control."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         if user_input is not None:
             return self.async_create_entry(data=user_input)
-        current = self.config_entry.options.get(CONF_CLOUD_POLL, False)
-        schema = vol.Schema({vol.Required(CONF_CLOUD_POLL, default=current): bool})
+        options = self.config_entry.options
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_CLOUD_POLL, default=options.get(CONF_CLOUD_POLL, False)): bool,
+                vol.Required(
+                    CONF_ENABLE_CONTROL, default=options.get(CONF_ENABLE_CONTROL, False)
+                ): bool,
+            }
+        )
         return self.async_show_form(step_id="init", data_schema=schema)

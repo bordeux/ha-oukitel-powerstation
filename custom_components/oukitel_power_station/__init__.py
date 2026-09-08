@@ -8,7 +8,12 @@ from homeassistant.core import HomeAssistant
 
 from .coordinator import OukitelCoordinator
 
+# SWITCH/SELECT/NUMBER are forwarded unconditionally; each platform checks the
+# `enable_control` option itself, keeping forward/unload symmetric across an
+# options change.
 PLATFORMS: list[Platform] = [
+    Platform.BINARY_SENSOR,
+    Platform.BUTTON,
     Platform.SENSOR,
     Platform.SWITCH,
     Platform.SELECT,

@@ -74,6 +74,7 @@ CONF_AUTH_KEY: Final = "auth_key"
 CONF_HOST: Final = "host"  # station LAN IP
 CONF_NAME: Final = "name"
 CONF_CLOUD_POLL: Final = "cloud_poll"  # opt-in: fetch cloud-only values (temp/voltage)
+CONF_ENABLE_CONTROL: Final = "enable_control"  # opt-in: expose switches/selects/number
 
 # Tags the device never sends over the LAN; only available from the cloud snapshot.
 CLOUD_ONLY_TAGS: Final = (14, 28)  # temperature, output voltage
