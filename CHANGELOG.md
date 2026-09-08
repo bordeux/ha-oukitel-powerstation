@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.4.0](https://github.com/bordeux/ha-oukitel-powerstation/compare/v0.3.4...v0.4.0) (2026-09-08)
+
+
+### Features
+
+* integration icon + Polish translations ([aa527e8](https://github.com/bordeux/ha-oukitel-powerstation/commit/aa527e8bc8a8749610b6290bed27fd44d6c4b1d9))
+
+
+### Bug Fixes
+
+* authKey refresh works for shared accounts (regenerateAuthKey) ([b891f13](https://github.com/bordeux/ha-oukitel-powerstation/commit/b891f133a1da44005c3f2f6b23670b4365021ce1))
+* authKey refresh works for shared accounts (regenerateAuthKey) ([b6af7f8](https://github.com/bordeux/ha-oukitel-powerstation/commit/b6af7f884b0b23496560bd734e3f1a7a9b5d4db9))
+* fail startup when authKey refresh returns rejected key ([24314a3](https://github.com/bordeux/ha-oukitel-powerstation/commit/24314a330deae817842f1c4cacc4bd0376bba6d0))
+* stop authKey ping-pong on shared accounts ([7ac8f2b](https://github.com/bordeux/ha-oukitel-powerstation/commit/7ac8f2b8bb289011e57b2e0ff86b52b1b2c1c57f))
+
 ## [0.3.4](https://github.com/bordeux/ha-oukitel-powerstation/compare/v0.3.3...v0.3.4) (2026-09-07)
 
 
