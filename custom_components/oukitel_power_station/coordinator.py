@@ -85,6 +85,7 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
         self._last_report: float | None = None
         self._connected_at: float | None = None
         self._reconnects = 0
+        self.options = dict(entry.options)
 
     @property
     def dk(self) -> str:
@@ -122,6 +123,11 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
             await conn.connect()
         except OukitelAuthError as err:
             await conn.close()
+            if self._auth_refetched:
+                # already tried a fresh key this outage — credentials, not the key
+                raise ConfigEntryAuthFailed(
+                    f"local login still rejected after authKey refresh ({err})"
+                ) from err
             _LOGGER.debug("auth rejected (%s); refetching authKey", err)
             await self._refetch_auth_key()
             raise UpdateFailed("auth key rotated; refetched, retrying") from err
@@ -141,6 +147,7 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
         self._connected_at = self.hass.loop.time()
         self._last_report = None
         self._reconnects += 1
+        self._auth_refetched = False  # key proved good — allow a future silent refresh
         _LOGGER.debug("connected to %s; subscribing", self.dk)
         # Start the reader before subscribing: if the subscribe fails we must not be
         # left holding a connection nobody reads.
@@ -178,23 +185,34 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
         self._last_report = None
 
     async def _refetch_auth_key(self) -> None:
-        """Re-fetch authKey from the cloud using stored credentials (reauth on failure)."""
+        """Re-fetch the live authKey via regenerateAuthKey.
+
+        One deterministic source: ``userDeviceList`` is frozen at binding time
+        on shared accounts, so preferring it over regenerate ping-pongs the
+        stored key (K0 rejected → regenerate K1 → reload → list K0 differs →
+        write K0 → …) and never reaches reauth. regenerateAuthKey is the app's
+        own fetch and returns the current device key without rotating it
+        (verified live).
+        """
         data = self.config_entry.data
         session = async_get_clientsession(self.hass)
         cloud = OukitelCloud(session, data[CONF_REGION])
         try:
             await cloud.login(data[CONF_EMAIL], data[CONF_PASSWORD])
-            devices = await cloud.get_devices()
+            auth_key = await cloud.regenerate_auth_key(data[CONF_PK], self.dk)
         except OukitelCloudAuthError as err:
             raise ConfigEntryAuthFailed(str(err)) from err
         except OukitelCloudError as err:
             raise UpdateFailed(f"cloud error: {err}") from err
-        match = next((d for d in devices if (d.get("deviceKey") or "").lower() == self.dk), None)
-        if not match or not match.get("authKey"):
-            raise ConfigEntryAuthFailed("device not found on account")
-        _LOGGER.debug("authKey refetched from cloud for %s", self.dk)
+        if auth_key == data.get(CONF_AUTH_KEY):
+            # The just-rejected key is also the deterministic cloud result.
+            # There is nothing a new coordinator/startup retry can change;
+            # fail into HA's reauth path instead of retrying forever.
+            raise ConfigEntryAuthFailed("regenerateAuthKey returned the rejected device key")
+        self._auth_refetched = True
+        _LOGGER.debug("authKey refreshed from cloud for %s", self.dk)
         self.hass.config_entries.async_update_entry(
-            self.config_entry, data={**data, CONF_AUTH_KEY: match["authKey"]}
+            self.config_entry, data={**data, CONF_AUTH_KEY: auth_key}
         )
 
     async def _poll_cloud_if_due(self) -> None:

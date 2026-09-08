@@ -127,7 +127,30 @@ class OukitelConfigFlow(ConfigFlow, domain=DOMAIN):
         try:
             await conn.connect()
         except OukitelAuthError:
-            errors["base"] = "invalid_auth"
+            # Shared accounts serve a binding-time-frozen key in userDeviceList;
+            # regenerateAuthKey returns the live one (deterministic — verified
+            # live on a shared P1500: repeated calls return the same value).
+            try:
+                session = async_get_clientsession(self.hass)
+                cloud = OukitelCloud(session, self._creds[CONF_REGION])
+                await cloud.login(self._creds[CONF_EMAIL], self._creds[CONF_PASSWORD])
+                auth_key = await cloud.regenerate_auth_key(
+                    self._device["productKey"], self._device["deviceKey"]
+                )
+            except OukitelCloudAuthError:
+                errors["base"] = "invalid_auth"
+            except OukitelCloudError:
+                errors["base"] = "cannot_connect"
+            else:
+                conn = OukitelConnection(host, auth_key)
+                try:
+                    await conn.connect()
+                except OukitelAuthError:
+                    errors["base"] = "invalid_auth"
+                except OukitelError:
+                    errors["base"] = "cannot_connect"
+                finally:
+                    await conn.close()
         except OukitelError:
             errors["base"] = "cannot_connect"
         finally:
@@ -169,25 +192,20 @@ class OukitelConfigFlow(ConfigFlow, domain=DOMAIN):
             cloud = OukitelCloud(session, self._creds[CONF_REGION])
             try:
                 await cloud.login(self._creds[CONF_EMAIL], user_input[CONF_PASSWORD])
-                devices = await cloud.get_devices()
+                auth_key = await cloud.regenerate_auth_key(entry.data[CONF_PK], entry.data[CONF_DK])
             except OukitelCloudAuthError:
                 errors["base"] = "invalid_auth"
             except OukitelCloudError:
                 errors["base"] = "cannot_connect"
             else:
-                dk = entry.data[CONF_DK]
-                match = next((d for d in devices if d["deviceKey"].lower() == dk.lower()), None)
-                if not match:
-                    errors["base"] = "no_devices"
-                else:
-                    return self.async_update_reload_and_abort(
-                        entry,
-                        data={
-                            **entry.data,
-                            CONF_PASSWORD: user_input[CONF_PASSWORD],
-                            CONF_AUTH_KEY: match["authKey"],
-                        },
-                    )
+                return self.async_update_reload_and_abort(
+                    entry,
+                    data={
+                        **entry.data,
+                        CONF_PASSWORD: user_input[CONF_PASSWORD],
+                        CONF_AUTH_KEY: auth_key,
+                    },
+                )
         return self.async_show_form(
             step_id="reauth_confirm",
             data_schema=vol.Schema({vol.Required(CONF_PASSWORD): str}),

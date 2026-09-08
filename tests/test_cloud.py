@@ -55,26 +55,31 @@ def check(name: str, cond: bool) -> None:
 class _FakeResponse:
     status = 200
 
+    def __init__(self, body: dict | None = None) -> None:
+        self._body = body if body is not None else {"code": 200, "data": {}}
+
     async def json(self, content_type: object = None) -> dict:
-        return {"code": 200, "data": {}}
+        return self._body
 
 
 class _FakeSession:
-    """Records request kwargs; optionally raises instead of responding."""
+    """Records request kwargs; optionally raises or serves a canned body."""
 
-    def __init__(self, raises: BaseException | None = None) -> None:
+    def __init__(self, raises: BaseException | None = None, body: dict | None = None) -> None:
         self.raises = raises
+        self.body = body
         self.kwargs: dict = {}
 
     def request(self, _method: str, _url: str, **kwargs):
         self.kwargs = kwargs
         raises = self.raises
+        body = self.body
 
         @contextlib.asynccontextmanager
         async def _cm():
             if raises is not None:
                 raise raises
-            yield _FakeResponse()
+            yield _FakeResponse(body)
 
         return _cm()
 
@@ -89,6 +94,19 @@ def _request_with(session) -> object:
         except BaseException as err:  # the test inspects whatever escapes
             return err
         return None
+
+    return asyncio.run(run())
+
+
+def _regen_with(body: dict) -> object:
+    """Run regenerate_auth_key against a fake session; (result_or_none, error_or_none)."""
+
+    async def run():
+        client = cloud.OukitelCloud(_FakeSession(body=body), "EU")
+        try:
+            return await client.regenerate_auth_key("p11wN7", "aabbccddeeff"), None
+        except BaseException as err:
+            return None, err
 
     return asyncio.run(run())
 
@@ -133,6 +151,12 @@ def main() -> None:
     check("ClientError -> OukitelCloudError", isinstance(conn_err, cloud.OukitelCloudError))
     to_err = _request_with(_FakeSession(TimeoutError()))
     check("TimeoutError -> OukitelCloudError", isinstance(to_err, cloud.OukitelCloudError))
+
+    # 6) regenerate_auth_key: returns the key, posts pk/dk, errors when absent
+    key, err = _regen_with({"code": 200, "data": {"authKey": "QUJDREVGRw=="}})
+    check("regenerate returns authKey", key == "QUJDREVGRw==" and err is None)
+    _, err = _regen_with({"code": 200, "data": {}})
+    check("regenerate without key -> OukitelCloudError", isinstance(err, cloud.OukitelCloudError))
 
     print(f"\nALL PASSED ({_passed} checks)")
 
