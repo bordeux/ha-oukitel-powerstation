@@ -29,11 +29,13 @@ class OukitelEntity(CoordinatorEntity[OukitelCoordinator]):
         dk = coordinator.dk
         self._attr_unique_id = f"{dk}_{description.key}"
         self._attr_translation_key = description.key
+        manifest = coordinator.manifest
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, dk)},
             name=coordinator.config_entry.data.get(CONF_NAME) or "Oukitel Power Station",
             manufacturer=MANUFACTURER,
-            model=DEFAULT_MODEL,
+            model=manifest.model or DEFAULT_MODEL,
+            model_id=manifest.product_key or None,
             connections={("mac", dk)} if len(dk) == 12 else set(),
         )
 

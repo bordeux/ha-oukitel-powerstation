@@ -45,7 +45,10 @@ async def async_setup_entry(
 ) -> None:
     """Set up numbers."""
     coordinator = entry.runtime_data
-    async_add_entities(OukitelNumber(coordinator, desc) for desc in NUMBERS)
+    manifest = coordinator.manifest
+    async_add_entities(
+        OukitelNumber(coordinator, desc) for desc in NUMBERS if manifest.has_tag(desc.tag)
+    )
 
 
 class OukitelNumber(OukitelEntity, NumberEntity):

@@ -45,7 +45,10 @@ async def async_setup_entry(
 ) -> None:
     """Set up selects."""
     coordinator = entry.runtime_data
-    async_add_entities(OukitelSelect(coordinator, desc) for desc in SELECTS)
+    manifest = coordinator.manifest
+    async_add_entities(
+        OukitelSelect(coordinator, desc) for desc in SELECTS if manifest.has_tag(desc.tag)
+    )
 
 
 class OukitelSelect(OukitelEntity, SelectEntity):

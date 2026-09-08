@@ -34,7 +34,8 @@ DISCOVERY_CMD: Final = 28721  # p1 — station's discovery reply
 TAG_HF_REPORTING: Final = 100
 HF_REPORTING_LAN_WIFI: Final = 3
 
-# read-list: the tag ids the app requests in a cmd17 (full snapshot)
+# Fallback read-list when no product manifest can be resolved (the list the app
+# requests in a cmd17 on the P2001E Plus). Runtime uses the manifest's list.
 READ_TAG_IDS: Final = (2, 8, 9, 6, 31, 7, 28, 27, 14, 12, 11, 5, 4, 3, 1, 34, 20, 100, 43, 44, 46)
 
 # ---- cloud (per region): base url, app secret (DOMAIN_SECRET), user domain ----
@@ -63,6 +64,9 @@ PATH_DEVICE_LIST: Final = "/v2/binding/enduserapi/userDeviceList"
 PATH_PRODUCT_TSL: Final = "/v2/binding/enduserapi/productTSL"
 # Current property values (returns every tag, incl. ones the LAN never sends).
 PATH_BUSINESS_ATTRS: Final = "/v2/binding/enduserapi/getDeviceBusinessAttributes"
+# Returns the CURRENT device authKey (the app's own fetch); the only working
+# source for shared accounts (their userDeviceList key is binding-time-frozen).
+PATH_REGENERATE_AUTH_KEY: Final = "/v2/binding/enduserapi/regenerateAuthKey"
 
 # ---- config entry keys ----
 CONF_REGION: Final = "region"
@@ -71,13 +75,18 @@ CONF_PASSWORD: Final = "password"
 CONF_PK: Final = "pk"  # productKey
 CONF_DK: Final = "dk"  # deviceKey (== MAC, lowercase, no separators)
 CONF_AUTH_KEY: Final = "auth_key"
-CONF_HOST: Final = "host"  # station LAN IP
+CONF_HOST: Final = "host"  # station LAN IP (absent/None = cloud-only station)
 CONF_NAME: Final = "name"
+CONF_MANIFEST: Final = "manifest"  # product manifest snapshot taken at setup
 CONF_CLOUD_POLL: Final = "cloud_poll"  # opt-in: fetch cloud-only values (temp/voltage)
+CONF_CLOUD_POLL_INTERVAL: Final = "cloud_poll_interval"  # seconds (cloud-only mode)
 
 # Tags the device never sends over the LAN; only available from the cloud snapshot.
 CLOUD_ONLY_TAGS: Final = (14, 28)  # temperature, output voltage
 CLOUD_POLL_INTERVAL_S: Final = 300  # how often to poll the cloud when enabled
+# Bounds for the cloud-only mode poll interval (options flow).
+CLOUD_POLL_INTERVAL_MIN_S: Final = 60
+CLOUD_POLL_INTERVAL_MAX_S: Final = 3600
 
 # ---- enum value maps (TSL) ----
 FREQUENCY_OPTIONS: Final = {0: "50 Hz", 1: "60 Hz"}
@@ -90,6 +99,7 @@ VOLTAGE_OPTIONS: Final = {
     240: "240 V",
 }
 
-# manufacturer / model for the device registry
+# manufacturer for the device registry (model comes from the product manifest;
+# DEFAULT_MODEL is only the fallback when no manifest can be resolved at all)
 MANUFACTURER: Final = "Oukitel"
 DEFAULT_MODEL: Final = "P2001E Plus"
