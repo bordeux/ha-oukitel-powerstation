@@ -23,12 +23,12 @@ historical "open task" notes that have since been resolved.
 | cloud account | EU region · uid `REDACTED_UID`, family `fid=REDACTED_FID` (email/password NOT stored here — pass via args or `QUECTEL_EMAIL`/`QUECTEL_PASSWORD` env vars) |
 | productKey (pk) | `p11wN7` |
 | deviceKey (dk) = MAC | `aabbccddeeff` |
-| **authKey** (local AES secret, base64) | **ROTATES on re-provision** — fetch fresh via `userDeviceList`. (seen: `REDACTED_AUTHKEY`, then after WiFi change `REDACTED_AUTHKEY`) |
+| **authKey** (local AES secret, base64) | **ROTATES on re-provision** — fetch fresh via `regenerateAuthKey` (see §7). `userDeviceList` is frozen at binding time on shared accounts. |
 | bindingCode | `REDACTED_BINDINGCODE` |
 | station LAN IP (on lab hotspot) | `10.42.0.149` (TCP 6607) |
 | cloud base (EU) | `https://iot-api.quecteleu.com` ; appSecret `3aRNUwWahjyANa7WfBK2wCCkxCexB6nXxKJwXxfePvzf` ; userDomain `E.SP.4294967410` |
 
-> `authKey` is per-device and may rotate if the cloud regenerates it; if local login fails, re-fetch via `userDeviceList`.
+> `authKey` is per-device and may rotate on re-provision. If local login fails, fetch the live key via `regenerateAuthKey` (not `userDeviceList` — that copy is frozen at binding time on shared accounts). See §7.
 
 ### Tools (in `tools/`)
 | file | purpose | run |
@@ -229,8 +229,9 @@ packetID / cmd` header stays in clear. Encryption is enabled only **after** a su
   the **same** key deterministically and the vendor app keeps working — the cloud just re-pushes
   the key the device already has. It is the app's normal authKey fetch, and the **only working
   fetch for shared accounts**: their `userDeviceList` copy is frozen at binding time and local
-  login with it fails (`p5=-1`). Prefer `userDeviceList` (read-only); fall back to
-  `regenerateAuthKey` when the list key proves stale (unchanged, yet login rejected).
+  login with it fails (`p5=-1`). The integration always calls `regenerateAuthKey`
+  on a rejected local login (one deterministic source; preferring the list key
+  ping-pongs K0↔K1 across reloads).
 
 ---
 
@@ -341,8 +342,10 @@ The full chain is proven end-to-end (see `tools/quectel_cloud.py`).
   - headers: `app-info`, `X-Q-Language: en`, `quec-random-url: <uuid>`
   - resp: `data.accessToken.token` = `Bearer <JWT>`
 - `GET https://iot-api.quecteleu.com/v2/binding/enduserapi/userDeviceList?pageNumber=1&pageSize=50`
-  (Authorization header) → `data.list[]`, **which already includes `authKey`** (no need to call
-  `regenerateAuthKey`). Fields: `productKey`, `deviceKey`, `authKey`, `bindingCode`, `deviceName`, …
+  (Authorization header) → `data.list[]`, which includes an `authKey` field. **On shared
+  accounts that copy is frozen at binding time** — local login with it fails (`p5=-1`).
+  The live key is `POST …/regenerateAuthKey` `{pk, dk}` (see §7). Other fields:
+  `productKey`, `deviceKey`, `bindingCode`, `deviceName`, …
 
 **This device (uid `REDACTED_UID`, family `fid=REDACTED_FID`):**
 | field | value |
@@ -359,7 +362,7 @@ The full chain is proven end-to-end (see `tools/quectel_cloud.py`).
 - AES-128-CBC decrypt (key=authKey bytes, iv=`REDACTED_NONCE` ASCII), captured telemetry →
   `00 0a 00 00` = TTLV(tag1, number 0); `01 60` = TTLV(tag44, bool false); `01 58` = TTLV(tag43, bool false). Valid PKCS5. ✓
 
-> ⚠️ `authKey` may rotate if the app/cloud regenerates it; if local login starts failing, re-fetch via `userDeviceList`.
+> ⚠️ `authKey` may rotate on re-provision; if local login starts failing, fetch the live key via `regenerateAuthKey` (see §7). `userDeviceList` is not a reliable source on shared accounts.
 
 ## 11c. Next: name the TTLV tags (data-point model)
 Each property is a TTLV `tag` (= Acceleronix dpId). To get human names/types/scales, fetch the product

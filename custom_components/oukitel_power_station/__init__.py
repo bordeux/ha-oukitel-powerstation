@@ -37,4 +37,13 @@ async def async_unload_entry(hass: HomeAssistant, entry: OukitelConfigEntry) -> 
 
 
 async def _async_reload_on_update(hass: HomeAssistant, entry: OukitelConfigEntry) -> None:
+    """Reload when options change.
+
+    Data-only updates (authKey, host) are consumed in-place: the coordinator
+    reads ``entry.data`` on every connect, so tearing the session down would
+    only reset the one-refresh-per-outage guard and loop the key rewrite.
+    """
+    coordinator = entry.runtime_data
+    if dict(entry.options) == coordinator.options:
+        return
     await hass.config_entries.async_reload(entry.entry_id)

@@ -55,26 +55,31 @@ def check(name: str, cond: bool) -> None:
 class _FakeResponse:
     status = 200
 
+    def __init__(self, body: dict | None = None) -> None:
+        self._body = body if body is not None else {"code": 200, "data": {}}
+
     async def json(self, content_type: object = None) -> dict:
-        return {"code": 200, "data": {}}
+        return self._body
 
 
 class _FakeSession:
-    """Records request kwargs; optionally raises instead of responding."""
+    """Records request kwargs; optionally raises or serves a canned body."""
 
-    def __init__(self, raises: BaseException | None = None) -> None:
+    def __init__(self, raises: BaseException | None = None, body: dict | None = None) -> None:
         self.raises = raises
+        self.body = body
         self.kwargs: dict = {}
 
     def request(self, _method: str, _url: str, **kwargs):
         self.kwargs = kwargs
         raises = self.raises
+        body = self.body
 
         @contextlib.asynccontextmanager
         async def _cm():
             if raises is not None:
                 raise raises
-            yield _FakeResponse()
+            yield _FakeResponse(body)
 
         return _cm()
 
@@ -93,38 +98,11 @@ def _request_with(session) -> object:
     return asyncio.run(run())
 
 
-class _AuthKeyResponse:
-    status = 200
-
-    def __init__(self, body: dict) -> None:
-        self._body = body
-
-    async def json(self, content_type: object = None) -> dict:
-        return self._body
-
-
-class _AuthKeySession:
-    """Serves a canned regenerateAuthKey body; records the request."""
-
-    def __init__(self, body: dict) -> None:
-        self.body = body
-        self.calls: list[dict] = []
-
-    def request(self, method: str, url: str, **kwargs):
-        self.calls.append({"method": method, "url": url, "kwargs": kwargs})
-
-        @contextlib.asynccontextmanager
-        async def _cm():
-            yield _AuthKeyResponse(self.body)
-
-        return _cm()
-
-
 def _regen_with(body: dict) -> object:
     """Run regenerate_auth_key against a fake session; (result_or_none, error_or_none)."""
 
     async def run():
-        client = cloud.OukitelCloud(_AuthKeySession(body), "EU")
+        client = cloud.OukitelCloud(_FakeSession(body=body), "EU")
         try:
             return await client.regenerate_auth_key("p11wN7", "aabbccddeeff"), None
         except BaseException as err:
