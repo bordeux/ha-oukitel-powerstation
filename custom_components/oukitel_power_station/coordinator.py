@@ -204,10 +204,12 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
             raise ConfigEntryAuthFailed(str(err)) from err
         except OukitelCloudError as err:
             raise UpdateFailed(f"cloud error: {err}") from err
-        self._auth_refetched = True
         if auth_key == data.get(CONF_AUTH_KEY):
-            _LOGGER.debug("authKey unchanged after regenerate for %s", self.dk)
-            return
+            # The just-rejected key is also the deterministic cloud result.
+            # There is nothing a new coordinator/startup retry can change;
+            # fail into HA's reauth path instead of retrying forever.
+            raise ConfigEntryAuthFailed("regenerateAuthKey returned the rejected device key")
+        self._auth_refetched = True
         _LOGGER.debug("authKey refreshed from cloud for %s", self.dk)
         self.hass.config_entries.async_update_entry(
             self.config_entry, data={**data, CONF_AUTH_KEY: auth_key}
