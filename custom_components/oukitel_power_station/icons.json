@@ -34,6 +34,12 @@
     },
     "number": {
       "ac_charge_limit": { "default": "mdi:battery-charging-high" }
+    },
+    "binary_sensor": {
+      "on_battery": { "default": "mdi:home-battery" }
+    },
+    "button": {
+      "reload": { "default": "mdi:reload" }
     }
   }
 }
