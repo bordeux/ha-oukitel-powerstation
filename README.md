@@ -1,5 +1,10 @@
 # Oukitel Power Station — Home Assistant integration
 
+[![GitHub release](https://img.shields.io/github/v/release/bordeux/ha-oukitel-powerstation)](https://github.com/bordeux/ha-oukitel-powerstation/releases)
+[![GitHub stars](https://img.shields.io/github/stars/bordeux/ha-oukitel-powerstation?style=flat)](https://github.com/bordeux/ha-oukitel-powerstation/stargazers)
+[![HACS](https://img.shields.io/badge/HACS-custom-41BDF5.svg)](https://hacs.xyz)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 Local control of the **Oukitel P2001E Plus** (and other Quectel/Acceleronix "WonderFree"-app power
 stations) in Home Assistant. After a one-time cloud login to fetch the per-device key, **all runtime
 communication is local** (LAN, no cloud) and **push-based** (the station streams updates).
@@ -60,6 +65,14 @@ AC charging input power, DC charging input power, Temperature, Inverter version,
 See [`PLAN.md`](PLAN.md). The protocol library is unit-tested against captured device traffic
 (`tests/`). Write commands (output toggles) are derived from captured app traffic; verify on your own
 device. Per-port (AC/USB/TypeC/DC) detailed power/voltage sensors are planned.
+
+## Contributors
+Thanks to everyone who has helped with the protocol work, testing on other models, and translations.
+
+[![Contributors](https://contrib.rocks/image?repo=bordeux/ha-oukitel-powerstation)](https://github.com/bordeux/ha-oukitel-powerstation/graphs/contributors)
+
+## Star history
+[![Star History Chart](https://api.star-history.com/svg?repos=bordeux/ha-oukitel-powerstation&type=Date)](https://star-history.com/#bordeux/ha-oukitel-powerstation&Date)
 
 ## Credits / disclaimer
 Independent, unofficial integration for personal use with your own hardware. Not affiliated with
