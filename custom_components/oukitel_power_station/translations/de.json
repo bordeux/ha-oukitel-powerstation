@@ -1,0 +1,13 @@
+{
+  "config": {
+    "error": {
+      "invalid_auth": "Ungültige Zugangsdaten.",
+      "password_format": "Die Quectel-Cloud hat dieses Passwortformat abgelehnt. Es muss 6 bis 20 Zeichen lang sein und Buchstaben sowie Zahlen oder Sonderzeichen enthalten.",
+      "cannot_connect": "Verbindung zur Station nicht möglich. Prüfe die IP-Adresse und ob Home Assistant den TCP-Port 6607 erreichen kann.",
+      "cloud_timeout": "Die Quectel-Cloud hat nicht rechtzeitig geantwortet. Prüfe die Internetverbindung und versuche es erneut.",
+      "cloud_unreachable": "Die Quectel-Cloud ist nicht erreichbar. Prüfe die gewählte Region, den DNS-/Internetzugang sowie Firewall oder Proxy.",
+      "cloud_response": "Die Quectel-Cloud hat die Anfrage abgelehnt oder unerwartet beantwortet. Versuche es später erneut; bleibt das Problem bestehen, prüfe das Home-Assistant-Protokoll.",
+      "no_devices": "Für dieses Konto wurden keine Geräte gefunden."
+    }
+  }
+}

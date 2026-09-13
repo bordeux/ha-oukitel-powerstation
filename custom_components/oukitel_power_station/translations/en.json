@@ -43,7 +43,11 @@
     },
     "error": {
       "invalid_auth": "Invalid credentials.",
-      "cannot_connect": "Could not connect.",
+      "password_format": "The Quectel cloud rejected this password format. It must be 6-20 characters and contain letters plus numbers or special characters.",
+      "cannot_connect": "Could not connect to the station. Check its IP address and that Home Assistant can reach TCP port 6607.",
+      "cloud_timeout": "The Quectel cloud did not respond. Check your Internet connection and try again.",
+      "cloud_unreachable": "The Quectel cloud could not be reached. Check the selected region, DNS/Internet access, and any firewall or proxy.",
+      "cloud_response": "The Quectel cloud rejected or returned an unexpected response. Try again later; if it persists, check the Home Assistant log.",
       "no_devices": "No devices found on this account."
     },
     "abort": {
