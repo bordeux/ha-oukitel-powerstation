@@ -11,6 +11,7 @@
       "temperature": { "default": "mdi:thermometer" },
       "inverter_version": { "default": "mdi:chip" },
       "bms_version": { "default": "mdi:chip" },
+      "inverter_temperature": { "default": "mdi:thermometer" },
       "ac_output_power": { "default": "mdi:power-socket-eu" },
       "ac_output_voltage": { "default": "mdi:sine-wave" },
       "usb_qc1_power": { "default": "mdi:usb-port" },

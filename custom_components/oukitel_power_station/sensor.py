@@ -118,6 +118,13 @@ SENSORS: tuple[OukitelSensorDescription, ...] = (
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda v: str(int(v)),
     ),
+    OukitelSensorDescription(
+        key="inverter_temperature",
+        tag=33,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
     # --- per-port power (struct sub-tags) ---
     # AC Info (tag 6): 2=AC1 power(W), 3=AC1 voltage(V)
     _power("ac_output_power", 6, 2),

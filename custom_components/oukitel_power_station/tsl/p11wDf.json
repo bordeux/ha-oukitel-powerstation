@@ -1,0 +1,651 @@
+{
+ "profile": {
+  "tslVersion": "1.2.0",
+  "productKey": "p11wDf",
+  "version": "20251103115244609"
+ },
+ "properties": [
+  {
+   "specs": [
+    {
+     "dataType": "BOOL",
+     "name": "1",
+     "value": "true"
+    },
+    {
+     "dataType": "BOOL",
+     "name": "0",
+     "value": "false"
+    }
+   ],
+   "code": "Low_Power_Recharge",
+   "dataType": "BOOL",
+   "name": "Slow Charge",
+   "subType": "R",
+   "id": 32,
+   "sort": 0,
+   "type": "PROPERTY",
+   "desc": ""
+  },
+  {
+   "specs": {
+    "unit": "min",
+    "min": "0",
+    "max": "65535",
+    "multiple": "",
+    "step": "1"
+   },
+   "code": "remain_time",
+   "dataType": "INT",
+   "name": "Time to Empty",
+   "subType": "R",
+   "id": 2,
+   "sort": 0,
+   "type": "PROPERTY",
+   "desc": ""
+  },
+  {
+   "specs": [
+    {
+     "specs": {
+      "unit": "W",
+      "min": "0",
+      "max": "65535",
+      "multiple": "",
+      "step": "1"
+     },
+     "code": "Car1_output",
+     "dataType": "INT",
+     "name": "12V Output",
+     "id": 2
+    },
+    {
+     "specs": {
+      "unit": "W",
+      "min": "0",
+      "max": "1000",
+      "multiple": "",
+      "step": "1"
+     },
+     "code": "Car2_output",
+     "dataType": "INT",
+     "name": "24V Output",
+     "id": 3
+    }
+   ],
+   "code": "dc_data",
+   "dataType": "STRUCT",
+   "name": "DC Output Info",
+   "subType": "RW",
+   "id": 9,
+   "sort": 1,
+   "type": "PROPERTY",
+   "desc": ""
+  },
+  {
+   "specs": [
+    {
+     "specs": {
+      "unit": "W",
+      "min": "0",
+      "max": "65535",
+      "multiple": "",
+      "step": "1"
+     },
+     "code": "ac1_output",
+     "dataType": "INT",
+     "name": "AC 1 Output",
+     "id": 2
+    },
+    {
+     "specs": {
+      "unit": "V",
+      "min": "0",
+      "max": "500",
+      "multiple": "",
+      "step": "1"
+     },
+     "code": "ac1_output_voltage",
+     "dataType": "INT",
+     "name": "AC 1 Voltage",
+     "id": 3
+    }
+   ],
+   "code": "ac_data",
+   "dataType": "STRUCT",
+   "name": "AC Info",
+   "subType": "RW",
+   "id": 6,
+   "sort": 2,
+   "type": "PROPERTY",
+   "desc": ""
+  },
+  {
+   "specs": [
+    {
+     "specs": {
+      "unit": "W",
+      "min": "0",
+      "max": "65535",
+      "multiple": "",
+      "step": "1"
+     },
+     "code": "Typec1_output",
+     "dataType": "INT",
+     "name": "Type-C 1 Output",
+     "id": 2
+    },
+    {
+     "specs": {
+      "unit": "W",
+      "min": "0",
+      "max": "65535",
+      "multiple": "",
+      "step": "1"
+     },
+     "code": "Typec2_output",
+     "dataType": "INT",
+     "name": "Type-C 2 Output",
+     "id": 5
+    },
+    {
+     "specs": {
+      "unit": "W",
+      "min": "0",
+      "max": "65535",
+      "multiple": "",
+      "step": "1"
+     },
+     "code": "Typec3_output",
+     "dataType": "INT",
+     "name": "Type-C 3 Output",
+     "id": 6
+    },
+    {
+     "specs": {
+      "unit": "W",
+      "min": "0",
+      "max": "65535",
+      "multiple": "",
+      "step": "1"
+     },
+     "code": "Typec4_output",
+     "dataType": "INT",
+     "name": "Type-C 4 Output",
+     "id": 7
+    }
+   ],
+   "code": "typec_data",
+   "dataType": "STRUCT",
+   "name": "Type-C Info",
+   "subType": "R",
+   "id": 8,
+   "sort": 3,
+   "type": "PROPERTY",
+   "desc": ""
+  },
+  {
+   "specs": [
+    {
+     "dataType": "ENUM",
+     "name": "50Hz",
+     "value": "0"
+    },
+    {
+     "dataType": "ENUM",
+     "name": "60Hz",
+     "value": "1"
+    }
+   ],
+   "code": "Frequency_Switchover",
+   "dataType": "ENUM",
+   "name": "Frequency Switch",
+   "subType": "RW",
+   "id": 27,
+   "sort": 4,
+   "type": "PROPERTY",
+   "desc": "切换频率开关"
+  },
+  {
+   "specs": [
+    {
+     "dataType": "ENUM",
+     "name": "100V",
+     "value": "100"
+    },
+    {
+     "dataType": "ENUM",
+     "name": "110V",
+     "value": "110"
+    },
+    {
+     "dataType": "ENUM",
+     "name": "120V",
+     "value": "120"
+    },
+    {
+     "dataType": "ENUM",
+     "name": "220V",
+     "value": "220"
+    },
+    {
+     "dataType": "ENUM",
+     "name": "230V",
+     "value": "230"
+    },
+    {
+     "dataType": "ENUM",
+     "name": "240V",
+     "value": "240"
+    }
+   ],
+   "code": "ACvoltage_Switchover",
+   "dataType": "ENUM",
+   "name": "Voltage Switch",
+   "subType": "RW",
+   "id": 28,
+   "sort": 5,
+   "type": "PROPERTY",
+   "desc": "交流电输出电压切换高低"
+  },
+  {
+   "specs": {
+    "unit": "min",
+    "min": "0",
+    "max": "65535",
+    "multiple": "",
+    "step": "1"
+   },
+   "code": "remain_charging_time",
+   "dataType": "INT",
+   "name": "Time to Full",
+   "subType": "R",
+   "id": 3,
+   "sort": 6,
+   "type": "PROPERTY",
+   "desc": ""
+  },
+  {
+   "specs": {
+    "unit": "W",
+    "min": "0",
+    "max": "65535",
+    "multiple": "",
+    "step": "1"
+   },
+   "code": "total_input_power",
+   "dataType": "INT",
+   "name": "Total Input",
+   "subType": "R",
+   "id": 4,
+   "sort": 7,
+   "type": "PROPERTY",
+   "desc": ""
+  },
+  {
+   "specs": {
+    "unit": "W",
+    "min": "0",
+    "max": "65535",
+    "multiple": "",
+    "step": "1"
+   },
+   "code": "total_output_power",
+   "dataType": "INT",
+   "name": "Total Output",
+   "subType": "R",
+   "id": 5,
+   "sort": 8,
+   "type": "PROPERTY",
+   "desc": ""
+  },
+  {
+   "specs": {
+    "unit": "W",
+    "min": "0",
+    "max": "65535",
+    "multiple": "",
+    "step": "1"
+   },
+   "code": "ac_input",
+   "dataType": "INT",
+   "name": "AC Input",
+   "subType": "R",
+   "id": 11,
+   "sort": 9,
+   "type": "PROPERTY",
+   "desc": ""
+  },
+  {
+   "specs": {
+    "unit": "W",
+    "min": "0",
+    "max": "65535",
+    "multiple": "",
+    "step": "1"
+   },
+   "code": "dc_input",
+   "dataType": "INT",
+   "name": "PV Input",
+   "subType": "R",
+   "id": 12,
+   "sort": 10,
+   "type": "PROPERTY",
+   "desc": ""
+  },
+  {
+   "specs": {
+    "unit": "℃",
+    "min": "-50",
+    "max": "100",
+    "multiple": "",
+    "step": "1"
+   },
+   "code": "temp",
+   "dataType": "INT",
+   "name": "Device Temp.",
+   "subType": "R",
+   "id": 14,
+   "sort": 11,
+   "type": "PROPERTY",
+   "desc": ""
+  },
+  {
+   "specs": [
+    {
+     "dataType": "BOOL",
+     "name": "1",
+     "value": "true"
+    },
+    {
+     "dataType": "BOOL",
+     "name": "0",
+     "value": "false"
+    }
+   ],
+   "code": "Aboot_Mode",
+   "dataType": "BOOL",
+   "name": "Smart Drive Mode",
+   "subType": "RW",
+   "id": 30,
+   "sort": 13,
+   "type": "PROPERTY",
+   "desc": ""
+  },
+  {
+   "specs": [
+    {
+     "dataType": "ENUM",
+     "name": "30min",
+     "value": "0"
+    },
+    {
+     "dataType": "ENUM",
+     "name": "1H",
+     "value": "1"
+    },
+    {
+     "dataType": "ENUM",
+     "name": "2H",
+     "value": "2"
+    },
+    {
+     "dataType": "ENUM",
+     "name": "3H",
+     "value": "3"
+    },
+    {
+     "dataType": "ENUM",
+     "name": "4H",
+     "value": "4"
+    },
+    {
+     "dataType": "ENUM",
+     "name": "6H",
+     "value": "6"
+    },
+    {
+     "dataType": "ENUM",
+     "name": "8H",
+     "value": "8"
+    },
+    {
+     "dataType": "ENUM",
+     "name": "Always On",
+     "value": "9"
+    }
+   ],
+   "code": "ac_standbytime",
+   "dataType": "ENUM",
+   "name": "Standby Time",
+   "subType": "RW",
+   "id": 18,
+   "sort": 14,
+   "type": "PROPERTY",
+   "desc": ""
+  },
+  {
+   "specs": {
+    "unit": "",
+    "min": "0",
+    "max": "65530",
+    "multiple": "",
+    "step": "1"
+   },
+   "code": "AC_Version",
+   "dataType": "INT",
+   "name": "Inverter Ver.",
+   "subType": "R",
+   "id": 31,
+   "sort": 15,
+   "type": "PROPERTY",
+   "desc": ""
+  },
+  {
+   "specs": {
+    "unit": "%",
+    "min": "0",
+    "max": "100",
+    "multiple": "",
+    "step": "1"
+   },
+   "code": "battery_percentage",
+   "dataType": "INT",
+   "name": "Battery Level",
+   "subType": "R",
+   "id": 1,
+   "sort": 16,
+   "type": "PROPERTY",
+   "desc": ""
+  },
+  {
+   "specs": [
+    {
+     "specs": {
+      "unit": "W",
+      "min": "0",
+      "max": "65535",
+      "multiple": "",
+      "step": "1"
+     },
+     "code": "USB_QC1_output",
+     "dataType": "INT",
+     "name": "USB-QC 1 Output",
+     "id": 2
+    },
+    {
+     "specs": {
+      "unit": "W",
+      "min": "0",
+      "max": "65535",
+      "multiple": "",
+      "step": "1"
+     },
+     "code": "USB_QC2_output",
+     "dataType": "INT",
+     "name": "USB-QC 2 Output",
+     "id": 8
+    },
+    {
+     "specs": {
+      "unit": "W",
+      "min": "0",
+      "max": "65535",
+      "multiple": "",
+      "step": "1"
+     },
+     "code": "USB_QC3_output",
+     "dataType": "INT",
+     "name": "USB-QC 3 Output",
+     "id": 11
+    },
+    {
+     "specs": {
+      "unit": "W",
+      "min": "0",
+      "max": "65535",
+      "multiple": "",
+      "step": "1"
+     },
+     "code": "USB_QC4_output",
+     "dataType": "INT",
+     "name": "USB-QC 4 Output",
+     "id": 12
+    }
+   ],
+   "code": "usb_data",
+   "dataType": "STRUCT",
+   "name": "USB Info",
+   "subType": "R",
+   "id": 7,
+   "sort": 17,
+   "type": "PROPERTY",
+   "desc": ""
+  },
+  {
+   "specs": {
+    "unit": "℃",
+    "min": "-2000",
+    "max": "2000",
+    "multiple": "",
+    "step": "1"
+   },
+   "code": "Inv_temp",
+   "dataType": "INT",
+   "name": "Inverter Temp.",
+   "subType": "R",
+   "id": 33,
+   "sort": 18,
+   "type": "PROPERTY",
+   "desc": "逆变器温度--/10"
+  },
+  {
+   "specs": [
+    {
+     "dataType": "ENUM",
+     "name": "OFF",
+     "value": "0"
+    },
+    {
+     "dataType": "ENUM",
+     "name": "Low",
+     "value": "1"
+    },
+    {
+     "dataType": "ENUM",
+     "name": "High",
+     "value": "2"
+    },
+    {
+     "dataType": "ENUM",
+     "name": "SOS",
+     "value": "3"
+    }
+   ],
+   "code": "LED_Ste",
+   "dataType": "ENUM",
+   "name": "LED Light",
+   "subType": "RW",
+   "id": 34,
+   "sort": 19,
+   "type": "PROPERTY",
+   "desc": ""
+  },
+  {
+   "specs": [
+    {
+     "dataType": "ENUM",
+     "name": "Standard Reporting",
+     "value": "0"
+    },
+    {
+     "dataType": "ENUM",
+     "name": "LAN High-Rate Reporting",
+     "value": "1"
+    },
+    {
+     "dataType": "ENUM",
+     "name": "Wi-Fi High-Rate Reporting",
+     "value": "2"
+    },
+    {
+     "dataType": "ENUM",
+     "name": "LAN & Wi-Fi High-Rate Reporting",
+     "value": "3"
+    }
+   ],
+   "code": "high_frequency_reporting",
+   "dataType": "ENUM",
+   "name": "High-Rate Reporting",
+   "subType": "RW",
+   "id": 100,
+   "sort": 20,
+   "type": "PROPERTY",
+   "desc": "有局域网，面板下发1-局域面板判断是否有局域网，网高频上报值给到设备，设备开始高频上报并上报1-局域网高频，30s后设备关闭高频上报并上报0，如果面板依旧下发1-局域网高频上报给到设备，设备继续高频上报。若面板未返回值，则设备不再高频上报。面板判断是否有局域网，若没有，面板下发2-Wi-Fi高频上报值给到设备，设备开始高频上报并上报2，30s后设备关闭高频上报并上报0，如果面板依旧下发2-Wi-F"
+  },
+  {
+   "specs": [
+    {
+     "dataType": "BOOL",
+     "name": "ON",
+     "value": "true"
+    },
+    {
+     "dataType": "BOOL",
+     "name": "OFF",
+     "value": "false"
+    }
+   ],
+   "code": "ac_switch",
+   "dataType": "BOOL",
+   "name": "AC Switch",
+   "subType": "RW",
+   "id": 43,
+   "sort": 25,
+   "type": "PROPERTY",
+   "desc": ""
+  },
+  {
+   "specs": [
+    {
+     "dataType": "BOOL",
+     "name": "ON",
+     "value": "true"
+    },
+    {
+     "dataType": "BOOL",
+     "name": "OFF",
+     "value": "false"
+    }
+   ],
+   "code": "dc_switch",
+   "dataType": "BOOL",
+   "name": "DC Switch",
+   "subType": "RW",
+   "id": 46,
+   "sort": 28,
+   "type": "PROPERTY",
+   "desc": ""
+  }
+ ]
+}

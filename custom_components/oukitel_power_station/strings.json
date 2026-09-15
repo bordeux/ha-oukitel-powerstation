@@ -80,6 +80,7 @@
       "temperature": { "name": "Temperature" },
       "inverter_version": { "name": "Inverter version" },
       "bms_version": { "name": "BMS version" },
+      "inverter_temperature": { "name": "Inverter temperature" },
       "ac_output_power": { "name": "AC output power" },
       "ac_output_voltage": { "name": "AC output voltage" },
       "usb_qc1_power": { "name": "USB-A power" },

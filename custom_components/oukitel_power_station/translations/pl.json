@@ -80,6 +80,7 @@
       "temperature": { "name": "Temperatura urządzenia" },
       "inverter_version": { "name": "Wersja firmware falownika" },
       "bms_version": { "name": "Wersja firmware BMS" },
+      "inverter_temperature": { "name": "Temperatura falownika" },
       "ac_output_power": { "name": "Moc wyjściowa AC" },
       "ac_output_voltage": { "name": "Napięcie wyjściowe AC" },
       "usb_qc1_power": { "name": "Moc USB-A" },
