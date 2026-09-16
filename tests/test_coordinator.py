@@ -71,6 +71,28 @@ def main() -> None:
     # last_report wins over connect time once one has arrived
     check("report supersedes connect time", stall(1000.0, 990.0, 100.0, timeout) is None)
 
+    # --- re-arm policy (issue #32 experiment) ---
+    # "always" is the shipped behaviour: rewrite tag 100 on every keepalive tick.
+    check("always: no reports yet", proto.should_rearm(None, policy=const.REARM_ALWAYS))
+    check("always: reports flowing", proto.should_rearm(1.0, policy=const.REARM_ALWAYS))
+    # "on_stall" lets the station's own burst lapse while telemetry is still arriving.
+    check(
+        "on_stall: no reports yet -> re-arm",
+        proto.should_rearm(None, policy=const.REARM_ON_STALL),
+    )
+    check(
+        "on_stall: reports flowing -> skip",
+        not proto.should_rearm(5.0, policy=const.REARM_ON_STALL, stall_after=20.0),
+    )
+    check(
+        "on_stall: reports stopped -> re-arm",
+        proto.should_rearm(25.0, policy=const.REARM_ON_STALL, stall_after=20.0),
+    )
+    check(
+        "on_stall: exactly at threshold -> re-arm",
+        proto.should_rearm(20.0, policy=const.REARM_ON_STALL, stall_after=20.0),
+    )
+
     print(f"\nALL PASSED ({_passed} checks)")
 
 

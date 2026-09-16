@@ -36,14 +36,21 @@ from .const import (
     CONF_DK,
     CONF_EMAIL,
     CONF_ENABLE_CONTROL,
+    CONF_HF_MODE,
     CONF_HOST,
     CONF_MANIFEST,
     CONF_NAME,
     CONF_PASSWORD,
     CONF_PK,
+    CONF_REARM_POLICY,
     CONF_REGION,
     DEFAULT_REGION,
     DOMAIN,
+    HF_REPORTING_LAN,
+    HF_REPORTING_LAN_WIFI,
+    HF_REPORTING_OFF,
+    REARM_ALWAYS,
+    REARM_ON_STALL,
     REGIONS,
 )
 from .discovery import async_discover
@@ -332,6 +339,31 @@ class OukitelOptionsFlow(OptionsFlow):
                     vol.Required(
                         CONF_ENABLE_CONTROL, default=options.get(CONF_ENABLE_CONTROL, False)
                     ): bool,
+                    # --- issue #32 experiment; defaults reproduce the shipped behaviour ---
+                    vol.Required(
+                        CONF_HF_MODE,
+                        default=str(options.get(CONF_HF_MODE, HF_REPORTING_LAN_WIFI)),
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=[
+                                str(HF_REPORTING_LAN_WIFI),
+                                str(HF_REPORTING_LAN),
+                                str(HF_REPORTING_OFF),
+                            ],
+                            translation_key="hf_mode",
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
+                    vol.Required(
+                        CONF_REARM_POLICY,
+                        default=options.get(CONF_REARM_POLICY, REARM_ALWAYS),
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=[REARM_ALWAYS, REARM_ON_STALL],
+                            translation_key="rearm_policy",
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
                 }
             )
         else:
