@@ -62,58 +62,122 @@
         "data": {
           "cloud_poll": "Fetch temperature & voltage from the cloud",
           "enable_control": "Enable device control (output switches, voltage/frequency, charge limit)",
-          "cloud_poll_interval": "Cloud poll interval (seconds)"
+          "cloud_poll_interval": "Cloud poll interval (seconds)",
+          "hf_mode": "Reporting mode written to the station (experiment)",
+          "rearm_policy": "Re-arm policy (experiment)"
         },
         "data_description": {
           "cloud_poll": "This device does not send temperature or output voltage over the local network. Enable this to poll the Quectel cloud every few minutes (using your stored credentials) to fill them in. Off by default to keep operation fully local.",
           "enable_control": "New entries default to off because this is a UPS. Existing entries keep control enabled. When on, exposes the output switches, output voltage/frequency and the AC charge limit as writable entities over the local link.",
-          "cloud_poll_interval": "How often to refresh data from the cloud shadow (60-3600 s). Data freshness is bounded by how often the station itself reports to the cloud."
+          "cloud_poll_interval": "How often to refresh data from the cloud shadow (60-3600 s). Data freshness is bounded by how often the station itself reports to the cloud.",
+          "hf_mode": "3 = stream to this integration and the Quectel cloud (current behaviour). 1 = stream to the local session only. 0 = do not enable streaming; values then refresh once per poll. Being held in a streaming mode appears to stop the station going idle - see issue #32.",
+          "rearm_policy": "The station drops out of reporting mode by itself after about half a minute. 'always' rewrites it every 12 s (current behaviour); 'on stall' only rewrites it once reports have actually stopped, letting the station idle in between."
         }
       }
     }
   },
   "entity": {
     "sensor": {
-      "battery": { "name": "Battery" },
-      "remaining_time": { "name": "Remaining time" },
-      "charging_time": { "name": "Charging time" },
-      "total_input_power": { "name": "Total input power" },
-      "total_output_power": { "name": "Total output power" },
-      "ac_input_power": { "name": "AC charging input power" },
-      "dc_input_power": { "name": "DC charging input power" },
-      "temperature": { "name": "Temperature" },
-      "inverter_version": { "name": "Inverter version" },
-      "bms_version": { "name": "BMS version" },
-      "ac_output_power": { "name": "AC output power" },
-      "ac_output_voltage": { "name": "AC output voltage" },
-      "usb_qc1_power": { "name": "USB-A power" },
-      "usb_qc2_power": { "name": "USB-C (QC) power" },
-      "typec1_power": { "name": "Type-C 1 power" },
-      "typec2_power": { "name": "Type-C 2 power" },
-      "typec3_power": { "name": "Type-C 3 power" },
-      "typec4_power": { "name": "Type-C 4 power" },
-      "dc_output_power": { "name": "DC (car) output power" },
-      "dc_output_voltage": { "name": "DC (car) output voltage" },
-      "dc_output_current": { "name": "DC (car) output current" }
+      "battery": {
+        "name": "Battery"
+      },
+      "remaining_time": {
+        "name": "Remaining time"
+      },
+      "charging_time": {
+        "name": "Charging time"
+      },
+      "total_input_power": {
+        "name": "Total input power"
+      },
+      "total_output_power": {
+        "name": "Total output power"
+      },
+      "ac_input_power": {
+        "name": "AC charging input power"
+      },
+      "dc_input_power": {
+        "name": "DC charging input power"
+      },
+      "temperature": {
+        "name": "Temperature"
+      },
+      "inverter_version": {
+        "name": "Inverter version"
+      },
+      "bms_version": {
+        "name": "BMS version"
+      },
+      "ac_output_power": {
+        "name": "AC output power"
+      },
+      "ac_output_voltage": {
+        "name": "AC output voltage"
+      },
+      "usb_qc1_power": {
+        "name": "USB-A power"
+      },
+      "usb_qc2_power": {
+        "name": "USB-C (QC) power"
+      },
+      "typec1_power": {
+        "name": "Type-C 1 power"
+      },
+      "typec2_power": {
+        "name": "Type-C 2 power"
+      },
+      "typec3_power": {
+        "name": "Type-C 3 power"
+      },
+      "typec4_power": {
+        "name": "Type-C 4 power"
+      },
+      "dc_output_power": {
+        "name": "DC (car) output power"
+      },
+      "dc_output_voltage": {
+        "name": "DC (car) output voltage"
+      },
+      "dc_output_current": {
+        "name": "DC (car) output current"
+      }
     },
     "switch": {
-      "ac_output": { "name": "AC output" },
-      "usb_output": { "name": "USB output" },
-      "dc_output": { "name": "DC output" }
+      "ac_output": {
+        "name": "AC output"
+      },
+      "usb_output": {
+        "name": "USB output"
+      },
+      "dc_output": {
+        "name": "DC output"
+      }
     },
     "select": {
-      "output_voltage": { "name": "Output voltage" },
-      "output_frequency": { "name": "Output frequency" },
-      "led_mode": { "name": "LED mode" }
+      "output_voltage": {
+        "name": "Output voltage"
+      },
+      "output_frequency": {
+        "name": "Output frequency"
+      },
+      "led_mode": {
+        "name": "LED mode"
+      }
     },
     "number": {
-      "ac_charge_limit": { "name": "AC charge limit" }
+      "ac_charge_limit": {
+        "name": "AC charge limit"
+      }
     },
     "binary_sensor": {
-      "on_battery": { "name": "Battery-powered (inferred)" }
+      "on_battery": {
+        "name": "Battery-powered (inferred)"
+      }
     },
     "button": {
-      "reload": { "name": "Reload" }
+      "reload": {
+        "name": "Reload"
+      }
     }
   },
   "selector": {
@@ -121,6 +185,19 @@
       "options": {
         "manual": "Enter a local IP address",
         "cloud_only": "Cloud-only monitoring (read-only)"
+      }
+    },
+    "hf_mode": {
+      "options": {
+        "3": "3 - local + cloud (current)",
+        "1": "1 - local only",
+        "0": "0 - off (poll only)"
+      }
+    },
+    "rearm_policy": {
+      "options": {
+        "always": "Always (every 12 s)",
+        "on_stall": "Only when reports stop"
       }
     }
   }

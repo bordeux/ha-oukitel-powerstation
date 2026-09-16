@@ -34,6 +34,7 @@ from .const import (
     CMD_WRITE_ACK,
     HF_REPORTING_LAN_WIFI,
     READ_TAG_IDS,
+    REARM_ON_STALL,
     TAG_HF_REPORTING,
 )
 
@@ -47,6 +48,10 @@ MAGIC = b"\xaa\xaa"
 # reports. If no frame arrives within the read timeout the socket is treated as
 # dead and the listener exits so the coordinator reconnects.
 _REARM_INTERVAL = 12.0
+# The station ends its reporting burst by itself after roughly half a minute (observed on
+# p11uve). Under the "on_stall" policy we only re-arm once reports have actually stopped,
+# which lets that lapse happen instead of overwriting tag 100 twice a minute. See issue #32.
+_REARM_STALL_AFTER = 20.0
 _READ_TIMEOUT = 90.0
 # Bound the TCP connect + handshake; without this a slow/unresponsive device
 # (or a half-open socket during a reload) blocks setup until HA's bootstrap
@@ -54,6 +59,22 @@ _READ_TIMEOUT = 90.0
 _CONNECT_TIMEOUT = 15.0
 # Tearing down a socket must never outlive a reconnect attempt.
 _CLOSE_TIMEOUT = 5.0
+
+
+def should_rearm(
+    report_age: float | None, *, policy: str, stall_after: float = _REARM_STALL_AFTER
+) -> bool:
+    """Whether this keepalive tick should rewrite tag 100.
+
+    "always" reproduces the shipped behaviour. "on_stall" holds off while telemetry is
+    still flowing, so the device's own burst is allowed to end. Pure, so the policy can
+    be tested without a station.
+    """
+    if policy != REARM_ON_STALL:
+        return True
+    if report_age is None:  # nothing has arrived yet on this session
+        return True
+    return report_age >= stall_after
 
 
 class OukitelError(Exception):
@@ -283,12 +304,21 @@ class OukitelConnection:
         on_report: Callable[[dict[int, object]], None] | None = None,
         port: int = 6607,
         read_tags: tuple[int, ...] | None = None,
+        hf_mode: int = HF_REPORTING_LAN_WIFI,
+        rearm_policy: str = "always",
     ) -> None:
         self._host = host
         self._port = port
         self._key = auth_key_to_key(auth_key_b64)
         self._on_report = on_report
         self._read_tags = read_tags if read_tags is not None else READ_TAG_IDS
+        self._hf_mode = hf_mode
+        self._rearm_policy = rearm_policy
+        self._last_report: float | None = None
+        self._rearms_skipped = 0
+        # Last value the station itself reported for tag 100. The firmware resets it to
+        # 0 on its own, so reading it back shows whether we are fighting that.
+        self._hf_readback: int | None = None
         self._reader: asyncio.StreamReader | None = None
         self._writer: asyncio.StreamWriter | None = None
         self._assembler = FrameAssembler()
@@ -388,7 +418,7 @@ class OukitelConnection:
     async def _rearm(self) -> None:
         """Re-assert HF reporting, snapshot read and heartbeat to keep the stream alive."""
         await self._send(
-            CMD_WRITE, ttlv_encode([(TAG_HF_REPORTING, "num", HF_REPORTING_LAN_WIFI)]), encrypt=True
+            CMD_WRITE, ttlv_encode([(TAG_HF_REPORTING, "num", self._hf_mode)]), encrypt=True
         )
         await self.async_read_all()
         await self._send(CMD_HEARTBEAT, ttlv_encode([(1, "num", 30), (2, "num", 1)]), encrypt=True)
@@ -407,6 +437,23 @@ class OukitelConnection:
         await self._send(
             CMD_READ, b"".join(struct.pack(">H", t) for t in self._read_tags), encrypt=True
         )
+
+    @property
+    def report_age(self) -> float | None:
+        """Seconds since the last decoded report, or None if none has arrived."""
+        if self._last_report is None:
+            return None
+        return asyncio.get_running_loop().time() - self._last_report
+
+    def session_info(self) -> dict[str, object]:
+        """Experiment state for diagnostics: what we asked for vs what the device did."""
+        return {
+            "hf_mode_written": self._hf_mode,
+            "hf_mode_readback": self._hf_readback,
+            "rearm_policy": self._rearm_policy,
+            "rearms_skipped": self._rearms_skipped,
+            "frames": self.stats(),
+        }
 
     def stats(self) -> str:
         """Compact per-session frame tally, for debug logs and diagnostics."""
@@ -427,8 +474,12 @@ class OukitelConnection:
                 except Exception as err:  # tolerate a bad frame in the loop
                     _LOGGER.debug("could not decode cmd %s (raw %s): %s", cmd, payload.hex(), err)
                     continue
-                if report and self._on_report:
-                    self._on_report(report)
+                if report:
+                    self._last_report = asyncio.get_running_loop().time()
+                    if (hf := report.get(TAG_HF_REPORTING)) is not None:
+                        self._hf_readback = int(hf) if isinstance(hf, int | float) else None
+                    if self._on_report:
+                        self._on_report(report)
             elif cmd == CMD_WRITE_ACK:
                 _LOGGER.debug("write ack received")
             elif cmd not in (CMD_PONG, CMD_PING):
@@ -439,8 +490,20 @@ class OukitelConnection:
         try:
             while True:
                 await asyncio.sleep(_REARM_INTERVAL)
+                if not should_rearm(self.report_age, policy=self._rearm_policy):
+                    self._rearms_skipped += 1
+                    _LOGGER.debug(
+                        "reports still flowing (age %.1fs); skipping re-arm [%s]",
+                        self.report_age or 0.0,
+                        self.session_info(),
+                    )
+                    continue
                 await self._rearm()
-                _LOGGER.debug("re-armed reporting (subscribe + read + heartbeat); %s", self.stats())
+                _LOGGER.debug(
+                    "re-armed reporting (tag100=%s + read + heartbeat); %s",
+                    self._hf_mode,
+                    self.session_info(),
+                )
         except asyncio.CancelledError:
             raise
         except Exception as err:

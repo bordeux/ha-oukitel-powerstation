@@ -24,11 +24,15 @@ from .const import (
     CONF_CLOUD_POLL_INTERVAL,
     CONF_DK,
     CONF_EMAIL,
+    CONF_HF_MODE,
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PK,
+    CONF_REARM_POLICY,
     CONF_REGION,
     DOMAIN,
+    HF_REPORTING_LAN_WIFI,
+    REARM_ALWAYS,
 )
 from .discovery import async_discover
 from .product import ProductManifest
@@ -143,11 +147,15 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
         if not host:
             return  # cloud-only station: never opens a local session
         _LOGGER.debug("(re)connecting to %s at %s", self.dk, host)
+        options = self.config_entry.options
         conn = OukitelConnection(
             host,
             self.config_entry.data[CONF_AUTH_KEY],
             self._handle_report,
             read_tags=self._manifest.read_tag_ids(),
+            # Experiment knobs (issue #32); the defaults are the shipped behaviour.
+            hf_mode=int(options.get(CONF_HF_MODE, HF_REPORTING_LAN_WIFI)),
+            rearm_policy=str(options.get(CONF_REARM_POLICY, REARM_ALWAYS)),
         )
         try:
             await conn.connect()
@@ -388,6 +396,7 @@ class OukitelCoordinator(DataUpdateCoordinator[dict[int, Any]]):
             "connected_for_s": round(now - self._connected_at, 1) if self._connected_at else None,
             "last_report_age_s": round(now - self._last_report, 1) if self._last_report else None,
             "frames": self._conn.stats() if self._conn else None,
+            **(self._conn.session_info() if self._conn else {}),
         }
 
     async def async_shutdown(self) -> None:

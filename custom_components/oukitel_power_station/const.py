@@ -32,7 +32,18 @@ DISCOVERY_CMD: Final = 28721  # p1 — station's discovery reply
 
 # tag 100 = high-frequency reporting mode (ENUM): 3 = LAN + Wi-Fi high-freq (used as "subscribe")
 TAG_HF_REPORTING: Final = 100
-HF_REPORTING_LAN_WIFI: Final = 3
+HF_REPORTING_OFF: Final = 0
+HF_REPORTING_LAN: Final = 1  # stream to the LAN session only
+HF_REPORTING_LAN_WIFI: Final = 3  # stream to the LAN session *and* the cloud
+
+# --- experiment (issue #32): what the station costs while we hold it in reporting mode.
+# The firmware drops tag 100 back to 0 by itself; we currently rewrite it every 12s.
+# Two independent knobs so a tester can separate "streaming to the cloud as well" from
+# "never being allowed to stop streaming".
+CONF_HF_MODE: Final = "hf_mode"  # value written to tag 100
+CONF_REARM_POLICY: Final = "rearm_policy"  # "always" | "on_stall"
+REARM_ALWAYS: Final = "always"
+REARM_ON_STALL: Final = "on_stall"
 
 # Fallback read-list when no product manifest can be resolved (the list the app
 # requests in a cmd17 on the P2001E Plus). Runtime uses the manifest's list.
