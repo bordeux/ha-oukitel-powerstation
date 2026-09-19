@@ -45,9 +45,10 @@ _TSL_DIR = Path(__file__).parent / "tsl"
 # productName from userDeviceList wins when it is available.
 KNOWN_PRODUCTS: dict[str, dict[str, Any]] = {
     "p11uve": {
-        "model": "P1500E Plus",
-        # Pinned to 5940 by this firmware (verified live) — useless sensors.
-        "excluded_tags": (2, 3),
+        # Oukitel P1500E Plus and P1000E Plus.
+        "model": "P1000E/P1500E Plus",
+        # remain_charging_time always mirrors remain_time; drop the duplicate.
+        "excluded_tags": (3,),
     },
     "p11wN7": {
         "model": DEFAULT_MODEL,

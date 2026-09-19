@@ -147,8 +147,9 @@ def test_build_manifest_known_products(p1500_tsl, p2001e_tsl, p2400_tsl):
     m1500 = resolve_manifest("p11uve", cloud_tsl=p1500_tsl)
     assert m1500 is not None
     assert m1500.product_key == "p11uve"
-    assert m1500.model == "P1500E Plus"
-    assert m1500.excluded_tags == (TAG_REMAIN_TIME, TAG_REMAIN_CHARGING_TIME)
+    assert m1500.model == KNOWN_PRODUCTS["p11uve"]["model"]
+    # tag 2 exposed (real minutes; 5940=99h cap at idle); tag 3 excluded as its duplicate
+    assert m1500.excluded_tags == (TAG_REMAIN_CHARGING_TIME,)
     # No curated manufacturer -> integration default.
     assert m1500.manufacturer == MANUFACTURER
 
@@ -188,8 +189,8 @@ def test_manifest_gating(p1500_tsl, p2001e_tsl):
     # P1500E Plus has LED, no USB switch; P2001E Plus has USB switch, no LED.
     assert m1500.has_tag(TAG_LED_STATUS) and not m1500.has_tag(TAG_USB_SWITCH)
     assert m2001e.has_tag(TAG_USB_SWITCH) and not m2001e.has_tag(TAG_LED_STATUS)
-    # curated exclude: the pinned time sensors vanish on the P1500E Plus only.
-    assert not m1500.has_tag(TAG_REMAIN_TIME)
+    # tag 2 exposed; tag 3 (duplicate) excluded on p11uve
+    assert m1500.has_tag(TAG_REMAIN_TIME)
     assert not m1500.has_tag(TAG_REMAIN_CHARGING_TIME)
     assert m2001e.has_tag(TAG_REMAIN_TIME)
     # struct subtag gating
@@ -242,12 +243,12 @@ def test_resolve_manifest_priority(p1500_tsl):
     resolved = resolve_manifest("p11uve", snapshot=fake)
     assert resolved is not None
     assert resolved.tsl_version == "snapshotted"
-    assert resolved.model == "P1500E Plus"
-    assert resolved.excluded_tags == (TAG_REMAIN_TIME, TAG_REMAIN_CHARGING_TIME)
+    assert resolved.model == KNOWN_PRODUCTS["p11uve"]["model"]
+    assert resolved.excluded_tags == (TAG_REMAIN_CHARGING_TIME,)
     # bundled as fallback
     resolved = resolve_manifest("p11uve")
     assert resolved is not None
-    assert resolved.model == "P1500E Plus"
+    assert resolved.model == KNOWN_PRODUCTS["p11uve"]["model"]
     assert resolved.tags == bundled.tags
     # cloud data as the last resort for an unknown product key
     resolved = resolve_manifest("pkNew", cloud_tsl=p1500_tsl)
