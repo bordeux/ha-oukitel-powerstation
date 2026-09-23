@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.7.0](https://github.com/bordeux/ha-oukitel-powerstation/compare/v0.6.0...v0.7.0) (2026-09-23)
+
+
+### Features
+
+* add Oukitel p1000e plus ([76bc70f](https://github.com/bordeux/ha-oukitel-powerstation/commit/76bc70f07d8c8d697e3568804b46a75e74e14559))
+* add Oukitel p1000e plus ([91bd363](https://github.com/bordeux/ha-oukitel-powerstation/commit/91bd363448d4d31821d6ef4173cc75ae8db838d1))
+* p11uve is also the Oukitel P1000 Plus (shared product key) ([f476726](https://github.com/bordeux/ha-oukitel-powerstation/commit/f4767267e781c6ecce668a92e8dd27fcd89bc780))
+
 ## [0.6.0](https://github.com/bordeux/ha-oukitel-powerstation/compare/v0.5.1...v0.6.0) (2026-09-16)
 
 
